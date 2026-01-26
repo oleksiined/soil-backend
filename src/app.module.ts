@@ -1,8 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+
 import { MissionsModule } from './missions/missions.module';
+import { FoldersModule } from './folders/folders.module';
+import { ProjectsModule } from './projects/projects.module';
+import { KmlLayersModule } from './kml-layers/kml-layers.module';
+
+import { Mission } from './missions/entities/mission.entity';
+import { Folder } from './folders/entities/folder.entity';
+import { Project } from './projects/entities/project.entity';
+import { KmlLayer } from './kml-layers/entities/kml-layer.entity';
 
 @Module({
   imports: [
@@ -13,12 +20,14 @@ import { MissionsModule } from './missions/missions.module';
       username: 'postgres',
       password: '4893',
       database: 'soil',
-      autoLoadEntities: true,
+      entities: [Mission, Folder, Project, KmlLayer],
       synchronize: true,
     }),
+
     MissionsModule,
+    FoldersModule,
+    ProjectsModule,
+    KmlLayersModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

@@ -1,22 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Mission } from '../entities/mission.entity';
+import { Mission } from './entities/mission.entity';
+import { CreateMissionDto } from './dto/create-mission.dto';
 
 @Injectable()
 export class MissionsService {
-  constructor(
-    @InjectRepository(Mission)
-    private readonly repo: Repository<Mission>,
-  ) {}
+  constructor(@InjectRepository(Mission) private repo: Repository<Mission>) {}
 
-  create(body: { name?: string }) {
-    return this.repo.save(
-      this.repo.create({ name: body?.name ?? null, status: 'new' }),
-    );
+  create(dto: CreateMissionDto) {
+    return this.repo.save(this.repo.create(dto));
   }
 
   findAll() {
-    return this.repo.find({ order: { id: 'DESC' } });
+    return this.repo.find();
+  }
+
+  findOne(id: number) {
+    return this.repo.findOneBy({ id });
   }
 }

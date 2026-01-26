@@ -1,18 +1,22 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MissionsService } from './missions.service';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Mission } from './entities/mission.entity';
+import { CreateMissionDto } from './dto/create-mission.dto';
 
-describe('MissionsService', () => {
-  let service: MissionsService;
+@Injectable()
+export class MissionsService {
+  constructor(@InjectRepository(Mission) private repo: Repository<Mission>) {}
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [MissionsService],
-    }).compile();
+  create(dto: CreateMissionDto) {
+    return this.repo.save(this.repo.create(dto));
+  }
 
-    service = module.get<MissionsService>(MissionsService);
-  });
+  findAll() {
+    return this.repo.find();
+  }
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-});
+  findOne(id: number) {
+    return this.repo.findOneBy({ id });
+  }
+}

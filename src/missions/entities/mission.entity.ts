@@ -5,10 +5,10 @@ export class Mission {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'text', nullable: true })
-  name: string | null;
+  @Column({ type: 'text' })
+  name: string;
 
-  @Column({ default: 'new' })
+  @Column({ type: 'text', default: 'new' })
   status: string;
 
   @CreateDateColumn()
