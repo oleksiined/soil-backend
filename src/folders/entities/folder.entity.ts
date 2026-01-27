@@ -12,6 +12,9 @@ export class Folder {
   @CreateDateColumn()
   created_at: Date;
 
+  @Column({ default: false })
+  isArchived: boolean;
+
   @OneToMany(() => Project, (p) => p.folder)
   projects: Project[];
 }

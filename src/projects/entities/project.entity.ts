@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { Folder } from '../../folders/entities/folder.entity';
 import { KmlLayer } from '../../kml-layers/entities/kml-layer.entity';
 
@@ -19,6 +27,9 @@ export class Project {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @Column({ default: false })
+  isArchived: boolean;
 
   @OneToMany(() => KmlLayer, (k) => k.project)
   kmlLayers: KmlLayer[];
