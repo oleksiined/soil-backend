@@ -6,6 +6,7 @@ import * as path from 'path';
 
 import { Project } from './entities/project.entity';
 import { KmlLayer, KmlType } from './entities/kml-layer.entity';
+import { ProjectDto } from './dto/project.dto';
 
 function normalizeType(v?: string): KmlType {
   const t = String(v || '').toLowerCase().trim();
@@ -17,6 +18,16 @@ function withFileUrl(layer: any) {
   return { ...layer, fileUrl: `/api/kml-layers/${layer.id}/file` };
 }
 
+function toProjectDto(p: Project): ProjectDto {
+  if (p.folderId == null) throw new BadRequestException('Project has no folderId');
+  return {
+    id: p.id,
+    folderId: p.folderId,
+    name: p.name,
+    isArchived: p.isArchived,
+  };
+}
+
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -26,7 +37,8 @@ export class ProjectsService {
 
   async createProject(folderId: number, name: string) {
     const project = this.projectRepo.create({ folderId, name: String(name || '').trim() });
-    return this.projectRepo.save(project);
+    const saved = await this.projectRepo.save(project);
+    return toProjectDto(saved);
   }
 
   async getProjectKmlLayers(projectId: number, includeArchived: boolean) {
@@ -63,7 +75,8 @@ export class ProjectsService {
     if (!project) throw new NotFoundException('Project not found');
 
     project.isArchived = isArchived;
-    return this.projectRepo.save(project);
+    const saved = await this.projectRepo.save(project);
+    return toProjectDto(saved);
   }
 
   async deleteProjectDeep(projectId: number) {

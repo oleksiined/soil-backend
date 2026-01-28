@@ -12,7 +12,4 @@ export class ProjectDto {
 
   @ApiProperty()
   isArchived: boolean;
-
-  @ApiProperty()
-  created_at: string;
 }
