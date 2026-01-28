@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { MoreThan } from 'typeorm';
 import { Repository } from 'typeorm';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -7,15 +8,13 @@ import * as path from 'path';
 import { Project } from './entities/project.entity';
 import { KmlLayer, KmlType } from './entities/kml-layer.entity';
 import { ProjectDto } from './dto/project.dto';
+import { KmlLayerDto } from './dto/kml-layer.dto';
+import { ProjectsSyncDto } from './dto/projects-sync.dto';
 
 function normalizeType(v?: string): KmlType {
   const t = String(v || '').toLowerCase().trim();
   if (t === 'track' || t === 'centroid' || t === 'points' || t === 'zones') return t;
   return 'track';
-}
-
-function withFileUrl(layer: any) {
-  return { ...layer, fileUrl: `/api/kml-layers/${layer.id}/file` };
 }
 
 function toProjectDto(p: Project): ProjectDto {
@@ -25,6 +24,18 @@ function toProjectDto(p: Project): ProjectDto {
     folderId: p.folderId,
     name: p.name,
     isArchived: p.isArchived,
+  };
+}
+
+function toKmlLayerDto(l: KmlLayer): KmlLayerDto {
+  return {
+    id: l.id,
+    projectId: l.projectId,
+    type: l.type,
+    originalName: l.originalName,
+    sizeBytes: l.sizeBytes || 0,
+    isArchived: l.isArchived,
+    fileUrl: `/api/kml-layers/${l.id}/file`,
   };
 }
 
@@ -46,7 +57,7 @@ export class ProjectsService {
       where: includeArchived ? { projectId } : { projectId, isArchived: false },
       order: { id: 'ASC' },
     });
-    return layers.map(withFileUrl);
+    return layers.map(toKmlLayerDto);
   }
 
   async getProjectDetails(projectId: number, includeArchived: boolean) {
@@ -60,7 +71,34 @@ export class ProjectsService {
 
     return {
       project: toProjectDto(project),
-      kmlLayers: layers.map(withFileUrl),
+      kmlLayers: layers.map(toKmlLayerDto),
+    };
+  }
+
+  async syncProjectsSinceId(
+    sinceProjectId: number,
+    sinceLayerId: number,
+  ): Promise<ProjectsSyncDto> {
+    const rawProjects = await this.projectRepo.find({
+      where: { id: MoreThan(sinceProjectId) },
+      order: { id: 'ASC' },
+    });
+
+    const validProjects = rawProjects.filter((p) => p.folderId != null);
+    const projects = validProjects.map(toProjectDto);
+    const projectIds = validProjects.map((p) => p.id);
+
+    const layersById = await this.kmlRepo.find({
+      where: { id: MoreThan(sinceLayerId) },
+      order: { id: 'ASC' },
+    });
+
+    const layers = projectIds.length ? layersById.filter((l) => projectIds.includes(l.projectId)) : [];
+
+    return {
+      serverTime: new Date().toISOString(),
+      projects,
+      kmlLayers: layers.map(toKmlLayerDto),
     };
   }
 
@@ -78,11 +116,12 @@ export class ProjectsService {
       type,
       originalName: file.originalname,
       path: relPath,
+      sizeBytes: file.size || 0,
       isArchived: false,
     });
 
     const saved = await this.kmlRepo.save(layer);
-    return withFileUrl(saved);
+    return toKmlLayerDto(saved);
   }
 
   async setArchived(id: number, isArchived: boolean) {

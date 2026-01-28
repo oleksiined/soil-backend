@@ -24,6 +24,9 @@ export class KmlLayer {
   @Column({ type: 'text' })
   path: string;
 
+  @Column({ name: 'size_bytes', type: 'int', default: 0 })
+  sizeBytes: number;
+
   @Column({ type: 'boolean', default: false })
   isArchived: boolean;
 

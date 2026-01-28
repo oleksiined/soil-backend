@@ -23,15 +23,44 @@ import { KmlLayerDto } from './dto/kml-layer.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UploadKmlDto } from './dto/upload-kml.dto';
 import { ProjectDetailsDto } from './dto/project-details.dto';
+import { ProjectsSyncDto } from './dto/projects-sync.dto';
 
 function safeName(name: string) {
   return name.replace(/[^\w.\-]+/g, '_');
+}
+
+function toInt(v: unknown, fallback: number) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
 @ApiTags('projects')
 @Controller()
 export class ProjectsController {
   constructor(private readonly service: ProjectsService) {}
+
+  @ApiOkResponse({ type: ProjectsSyncDto })
+  @ApiQuery({
+    name: 'sinceProjectId',
+    required: false,
+    description: 'Return projects with id > sinceProjectId (default 0)',
+    schema: { type: 'number', example: 0 },
+  })
+  @ApiQuery({
+    name: 'sinceLayerId',
+    required: false,
+    description: 'Return kml layers with id > sinceLayerId (default 0)',
+    schema: { type: 'number', example: 0 },
+  })
+  @Get('sync/projects')
+  syncProjects(
+    @Query('sinceProjectId') sinceProjectId?: string,
+    @Query('sinceLayerId') sinceLayerId?: string,
+  ) {
+    const pId = toInt(sinceProjectId, 0);
+    const lId = toInt(sinceLayerId, 0);
+    return this.service.syncProjectsSinceId(pId, lId);
+  }
 
   @ApiOkResponse({ type: ProjectDto })
   @ApiBody({ type: CreateProjectDto })

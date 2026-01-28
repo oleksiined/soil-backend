@@ -14,6 +14,9 @@ export class KmlLayerDto {
   originalName: string;
 
   @ApiProperty()
+  sizeBytes: number;
+
+  @ApiProperty()
   isArchived: boolean;
 
   @ApiProperty()
