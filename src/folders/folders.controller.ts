@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { FoldersService } from './folders.service';
 
 @Controller('folders')
@@ -27,7 +37,8 @@ export class FoldersController {
   }
 
   @Delete(':id')
-  deleteDeep(@Param('id', ParseIntPipe) id: number) {
-    return this.service.deleteFolderDeep(id);
+  async deleteDeep(@Param('id', ParseIntPipe) id: number) {
+    await this.service.deleteFolderDeep(id);
+    return { ok: true, deletedId: id };
   }
 }

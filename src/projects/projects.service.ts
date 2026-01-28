@@ -26,7 +26,6 @@ export class ProjectsService {
   }
 
   async getProjectKmlLayers(projectId: number) {
-    // можна повертати всі (включно з archived) — фронт сам показує
     return this.kmlRepo.find({
       where: { projectId },
       order: { id: 'ASC' },
@@ -58,9 +57,7 @@ export class ProjectsService {
     if (!project) throw new NotFoundException('Project not found');
 
     project.isArchived = isArchived;
-    await this.projectRepo.save(project);
-
-    return { ok: true };
+    return this.projectRepo.save(project);
   }
 
   async deleteProjectDeep(projectId: number) {
@@ -79,6 +76,5 @@ export class ProjectsService {
     }
 
     await this.projectRepo.remove(project);
-    return { ok: true };
   }
 }

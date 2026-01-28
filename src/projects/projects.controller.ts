@@ -1,12 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
   Patch,
   Post,
-  Delete,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -25,22 +25,16 @@ function safeName(name: string) {
 export class ProjectsController {
   constructor(private readonly service: ProjectsService) {}
 
-  // create project
   @Post('folders/:folderId/projects')
-  createProject(
-    @Param('folderId', ParseIntPipe) folderId: number,
-    @Body() body: { name: string },
-  ) {
+  createProject(@Param('folderId', ParseIntPipe) folderId: number, @Body() body: { name: string }) {
     return this.service.createProject(folderId, body.name);
   }
 
-  // list KML layers for project
   @Get('projects/:id/kml-layers')
   getProjectKml(@Param('id', ParseIntPipe) projectId: number) {
     return this.service.getProjectKmlLayers(projectId);
   }
 
-  // upload KML layer to project  ✅ ОЦЕ ТЕ, ЧОГО НЕ ВИСТАЧАЛО
   @Post('projects/:id/kml-layers')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -67,7 +61,6 @@ export class ProjectsController {
     return this.service.uploadProjectKml(projectId, body?.type, file);
   }
 
-  // archive/unarchive/delete project
   @Patch('projects/:id/archive')
   archive(@Param('id', ParseIntPipe) id: number) {
     return this.service.setArchived(id, true);
@@ -79,7 +72,8 @@ export class ProjectsController {
   }
 
   @Delete('projects/:id')
-  deleteProjectDeep(@Param('id', ParseIntPipe) id: number) {
-    return this.service.deleteProjectDeep(id);
+  async deleteProjectDeep(@Param('id', ParseIntPipe) id: number) {
+    await this.service.deleteProjectDeep(id);
+    return { ok: true, deletedId: id };
   }
 }

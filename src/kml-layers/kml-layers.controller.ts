@@ -16,7 +16,8 @@ export class KmlLayersController {
   }
 
   @Delete(':id')
-  deleteOne(@Param('id', ParseIntPipe) id: number) {
-    return this.service.deleteOne(id);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    await this.service.deleteLayer(id);
+    return { ok: true, deletedId: id };
   }
 }

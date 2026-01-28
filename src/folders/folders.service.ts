@@ -51,9 +51,7 @@ export class FoldersService {
     if (!folder) throw new NotFoundException('Folder not found');
 
     folder.isArchived = isArchived;
-    await this.folderRepo.save(folder);
-
-    return { ok: true };
+    return this.folderRepo.save(folder);
   }
 
   async deleteFolderDeep(folderId: number) {
@@ -78,6 +76,5 @@ export class FoldersService {
     }
 
     await this.folderRepo.remove(folder);
-    return { ok: true };
   }
 }
