@@ -49,6 +49,21 @@ export class ProjectsService {
     return layers.map(withFileUrl);
   }
 
+  async getProjectDetails(projectId: number, includeArchived: boolean) {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException('Project not found');
+
+    const layers = await this.kmlRepo.find({
+      where: includeArchived ? { projectId } : { projectId, isArchived: false },
+      order: { id: 'ASC' },
+    });
+
+    return {
+      project: toProjectDto(project),
+      kmlLayers: layers.map(withFileUrl),
+    };
+  }
+
   async uploadProjectKml(projectId: number, typeRaw?: string, file?: Express.Multer.File) {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
     if (!project) throw new NotFoundException('Project not found');

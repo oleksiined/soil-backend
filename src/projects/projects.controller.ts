@@ -15,13 +15,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 
 import { ProjectsService } from './projects.service';
 import { ProjectDto } from './dto/project.dto';
 import { KmlLayerDto } from './dto/kml-layer.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UploadKmlDto } from './dto/upload-kml.dto';
+import { ProjectDetailsDto } from './dto/project-details.dto';
 
 function safeName(name: string) {
   return name.replace(/[^\w.\-]+/g, '_');
@@ -42,7 +43,27 @@ export class ProjectsController {
     return this.service.createProject(folderId, body.name);
   }
 
+  @ApiOkResponse({ type: ProjectDetailsDto })
+  @ApiQuery({
+    name: 'includeArchived',
+    required: false,
+    schema: { type: 'string', example: 'false' },
+  })
+  @Get('projects/:id')
+  getProjectDetails(
+    @Param('id', ParseIntPipe) projectId: number,
+    @Query('includeArchived') includeArchived?: string,
+  ) {
+    const flag = includeArchived === '1' || includeArchived === 'true';
+    return this.service.getProjectDetails(projectId, flag);
+  }
+
   @ApiOkResponse({ type: [KmlLayerDto] })
+  @ApiQuery({
+    name: 'includeArchived',
+    required: false,
+    schema: { type: 'string', example: 'false' },
+  })
   @Get('projects/:id/kml-layers')
   getProjectKml(
     @Param('id', ParseIntPipe) projectId: number,

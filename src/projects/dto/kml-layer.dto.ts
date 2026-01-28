@@ -17,8 +17,5 @@ export class KmlLayerDto {
   isArchived: boolean;
 
   @ApiProperty()
-  created_at: string;
-
-  @ApiProperty()
   fileUrl: string;
 }
