@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -43,8 +44,12 @@ export class ProjectsController {
 
   @ApiOkResponse({ type: [KmlLayerDto] })
   @Get('projects/:id/kml-layers')
-  getProjectKml(@Param('id', ParseIntPipe) projectId: number) {
-    return this.service.getProjectKmlLayers(projectId);
+  getProjectKml(
+    @Param('id', ParseIntPipe) projectId: number,
+    @Query('includeArchived') includeArchived?: string,
+  ) {
+    const flag = includeArchived === '1' || includeArchived === 'true';
+    return this.service.getProjectKmlLayers(projectId, flag);
   }
 
   @ApiOkResponse({ type: KmlLayerDto })

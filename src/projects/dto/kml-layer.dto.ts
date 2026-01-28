@@ -14,11 +14,11 @@ export class KmlLayerDto {
   originalName: string;
 
   @ApiProperty()
-  path: string;
-
-  @ApiProperty()
   isArchived: boolean;
 
   @ApiProperty()
   created_at: string;
+
+  @ApiProperty()
+  fileUrl: string;
 }

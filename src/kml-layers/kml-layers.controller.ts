@@ -1,5 +1,7 @@
-import { Controller, Delete, Param, ParseIntPipe, Patch } from '@nestjs/common';
+import { Controller, Delete, Get, Param, ParseIntPipe, Patch, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { createReadStream } from 'fs';
 import { KmlLayersService } from './kml-layers.service';
 import { KmlLayerDto } from '../projects/dto/kml-layer.dto';
 
@@ -20,14 +22,19 @@ export class KmlLayersController {
     return this.service.setArchived(id, false);
   }
 
-  @ApiOkResponse({
-    schema: {
-      example: { ok: true, deletedId: 123 },
-    },
-  })
+  @ApiOkResponse({ schema: { example: { ok: true, deletedId: 123 } } })
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.service.deleteLayer(id);
     return { ok: true, deletedId: id };
+  }
+
+  @ApiOkResponse({ schema: { type: 'string', format: 'binary' } })
+  @Get(':id/file')
+  async download(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+    const { absPath, filename } = await this.service.getLayerFile(id);
+    res.setHeader('Content-Type', 'application/vnd.google-earth.kml+xml');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return createReadStream(absPath).pipe(res);
   }
 }

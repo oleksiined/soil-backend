@@ -13,6 +13,10 @@ function normalizeType(v?: string): KmlType {
   return 'track';
 }
 
+function withFileUrl(layer: any) {
+  return { ...layer, fileUrl: `/api/kml-layers/${layer.id}/file` };
+}
+
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -25,11 +29,12 @@ export class ProjectsService {
     return this.projectRepo.save(project);
   }
 
-  async getProjectKmlLayers(projectId: number) {
-    return this.kmlRepo.find({
-      where: { projectId },
+  async getProjectKmlLayers(projectId: number, includeArchived: boolean) {
+    const layers = await this.kmlRepo.find({
+      where: includeArchived ? { projectId } : { projectId, isArchived: false },
       order: { id: 'ASC' },
     });
+    return layers.map(withFileUrl);
   }
 
   async uploadProjectKml(projectId: number, typeRaw?: string, file?: Express.Multer.File) {
@@ -49,7 +54,8 @@ export class ProjectsService {
       isArchived: false,
     });
 
-    return this.kmlRepo.save(layer);
+    const saved = await this.kmlRepo.save(layer);
+    return withFileUrl(saved);
   }
 
   async setArchived(id: number, isArchived: boolean) {

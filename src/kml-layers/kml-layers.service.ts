@@ -27,15 +27,23 @@ export class KmlLayersService {
 
     const storedPath = layer.path || '';
     if (storedPath) {
-      const abs = path.isAbsolute(storedPath)
-        ? storedPath
-        : path.join(process.cwd(), storedPath);
-
+      const abs = path.isAbsolute(storedPath) ? storedPath : path.join(process.cwd(), storedPath);
       try {
         await fs.unlink(abs);
       } catch {}
     }
 
     await this.kmlRepo.remove(layer);
+  }
+
+  async getLayerFile(id: number) {
+    const layer = await this.kmlRepo.findOne({ where: { id } });
+    if (!layer) throw new NotFoundException('KML layer not found');
+
+    const storedPath = layer.path || '';
+    if (!storedPath) throw new NotFoundException('KML file not found');
+
+    const abs = path.isAbsolute(storedPath) ? storedPath : path.join(process.cwd(), storedPath);
+    return { absPath: abs, filename: layer.originalName || `kml-layer-${id}.kml` };
   }
 }
