@@ -12,6 +12,7 @@ import {
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { FoldersService } from './folders.service';
 import { FolderDto } from './dto/folder.dto';
+import { CreateFolderDto } from './dto/create-folder.dto';
 
 @ApiTags('folders')
 @Controller('folders')
@@ -27,7 +28,7 @@ export class FoldersController {
 
   @ApiOkResponse({ type: FolderDto })
   @Post()
-  createFolder(@Body() body: { name: string }) {
+  createFolder(@Body() body: CreateFolderDto) {
     return this.service.createFolder(body.name);
   }
 
@@ -43,11 +44,7 @@ export class FoldersController {
     return this.service.setArchived(id, false);
   }
 
-  @ApiOkResponse({
-    schema: {
-      example: { ok: true, deletedId: 123 },
-    },
-  })
+  @ApiOkResponse({ schema: { example: { ok: true, deletedId: 123 } } })
   @Delete(':id')
   async deleteDeep(@Param('id', ParseIntPipe) id: number) {
     await this.service.deleteFolderDeep(id);

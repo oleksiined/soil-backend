@@ -14,11 +14,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { ProjectsService } from './projects.service';
 import { ProjectDto } from './dto/project.dto';
 import { KmlLayerDto } from './dto/kml-layer.dto';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UploadKmlDto } from './dto/upload-kml.dto';
 
 function safeName(name: string) {
   return name.replace(/[^\w.\-]+/g, '_');
@@ -30,10 +32,11 @@ export class ProjectsController {
   constructor(private readonly service: ProjectsService) {}
 
   @ApiOkResponse({ type: ProjectDto })
+  @ApiBody({ type: CreateProjectDto })
   @Post('folders/:folderId/projects')
   createProject(
     @Param('folderId', ParseIntPipe) folderId: number,
-    @Body() body: { name: string },
+    @Body() body: CreateProjectDto,
   ) {
     return this.service.createProject(folderId, body.name);
   }
@@ -45,6 +48,17 @@ export class ProjectsController {
   }
 
   @ApiOkResponse({ type: KmlLayerDto })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['track', 'points', 'centroid', 'zones'] },
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
   @Post('projects/:id/kml-layers')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -65,7 +79,7 @@ export class ProjectsController {
   )
   uploadKml(
     @Param('id', ParseIntPipe) projectId: number,
-    @Body() body: { type?: string },
+    @Body() body: UploadKmlDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.service.uploadProjectKml(projectId, body?.type, file);
@@ -83,11 +97,7 @@ export class ProjectsController {
     return this.service.setArchived(id, false);
   }
 
-  @ApiOkResponse({
-    schema: {
-      example: { ok: true, deletedId: 123 },
-    },
-  })
+  @ApiOkResponse({ schema: { example: { ok: true, deletedId: 123 } } })
   @Delete('projects/:id')
   async deleteProjectDeep(@Param('id', ParseIntPipe) id: number) {
     await this.service.deleteProjectDeep(id);

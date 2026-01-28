@@ -43,7 +43,8 @@ export class FoldersService {
 
   async createFolder(name: string) {
     const folder = this.folderRepo.create({ name: String(name || '').trim() });
-    return this.folderRepo.save(folder);
+    const saved = await this.folderRepo.save(folder);
+    return { ...saved, projects: [] };
   }
 
   async setArchived(id: number, isArchived: boolean) {
@@ -51,7 +52,14 @@ export class FoldersService {
     if (!folder) throw new NotFoundException('Folder not found');
 
     folder.isArchived = isArchived;
-    return this.folderRepo.save(folder);
+    const saved = await this.folderRepo.save(folder);
+
+    const projects = await this.projectRepo.find({
+      where: { folderId: id, isArchived: false },
+      order: { id: 'ASC' },
+    });
+
+    return { ...saved, projects };
   }
 
   async deleteFolderDeep(folderId: number) {
