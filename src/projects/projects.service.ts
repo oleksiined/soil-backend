@@ -1,62 +1,84 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 
 import { Project } from './entities/project.entity';
-import { CreateProjectDto } from './dto/create-project.dto';
-import { UpdateProjectDto } from './dto/update-project.dto';
+import { KmlLayer, KmlType } from './entities/kml-layer.entity';
+
+function normalizeType(v?: string): KmlType {
+  const t = String(v || '').toLowerCase().trim();
+  if (t === 'track' || t === 'centroid' || t === 'points' || t === 'zones') return t;
+  return 'track';
+}
 
 @Injectable()
 export class ProjectsService {
-  constructor(@InjectRepository(Project) private repo: Repository<Project>) {}
+  constructor(
+    @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
+    @InjectRepository(KmlLayer) private readonly kmlRepo: Repository<KmlLayer>,
+  ) {}
 
-  create(dto: CreateProjectDto) {
-    if (!dto?.name) throw new BadRequestException('name is required');
-    if (!dto?.folderId) throw new BadRequestException('folderId is required');
-    return this.repo.save(this.repo.create(dto));
+  async createProject(folderId: number, name: string) {
+    const project = this.projectRepo.create({ folderId, name: String(name || '').trim() });
+    return this.projectRepo.save(project);
   }
 
-  // ✅ за замовчуванням показуємо тільки НЕархівні
-  findAll(includeArchived = false) {
-    if (includeArchived) return this.repo.find();
-    return this.repo.find({ where: { isArchived: false } });
-  }
-
-  findOne(id: number) {
-    return this.repo.findOne({ where: { id } });
-  }
-
-  async update(id: number, dto: UpdateProjectDto) {
-    await this.repo.update({ id }, dto as any);
-    return this.findOne(id);
-  }
-
-  async remove(id: number) {
-    const row = await this.repo.findOne({ where: { id } });
-    if (!row) throw new NotFoundException('Project not found');
-    await this.repo.delete({ id });
-    return { deleted: true, id };
-  }
-
-  async archive(id: number) {
-    const row = await this.repo.findOne({ where: { id } });
-    if (!row) throw new NotFoundException('Project not found');
-    await this.repo.update({ id }, { isArchived: true });
-    return { archived: true, id };
-  }
-
-  async unarchive(id: number) {
-    const row = await this.repo.findOne({ where: { id } });
-    if (!row) throw new NotFoundException('Project not found');
-    await this.repo.update({ id }, { isArchived: false });
-    return { archived: false, id };
-  }
-
-  // ✅ забрати KML шари для проєкту
-  async getKmlLayers(projectId: number) {
-    return this.repo.findOne({
-      where: { id: projectId },
-      relations: { kmlLayers: true },
+  async getProjectKmlLayers(projectId: number) {
+    // можна повертати всі (включно з archived) — фронт сам показує
+    return this.kmlRepo.find({
+      where: { projectId },
+      order: { id: 'ASC' },
     });
+  }
+
+  async uploadProjectKml(projectId: number, typeRaw?: string, file?: Express.Multer.File) {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException('Project not found');
+
+    if (!file) throw new BadRequestException('File is missing (field name must be "file")');
+
+    const type = normalizeType(typeRaw);
+    const relPath = path.join('uploads', 'kml', file.filename);
+
+    const layer = this.kmlRepo.create({
+      projectId,
+      type,
+      originalName: file.originalname,
+      path: relPath,
+      isArchived: false,
+    });
+
+    return this.kmlRepo.save(layer);
+  }
+
+  async setArchived(id: number, isArchived: boolean) {
+    const project = await this.projectRepo.findOne({ where: { id } });
+    if (!project) throw new NotFoundException('Project not found');
+
+    project.isArchived = isArchived;
+    await this.projectRepo.save(project);
+
+    return { ok: true };
+  }
+
+  async deleteProjectDeep(projectId: number) {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException('Project not found');
+
+    const layers = await this.kmlRepo.find({ where: { projectId } });
+    for (const l of layers) {
+      const storedPath = l.path || '';
+      if (!storedPath) continue;
+
+      const abs = path.isAbsolute(storedPath) ? storedPath : path.join(process.cwd(), storedPath);
+      try {
+        await fs.unlink(abs);
+      } catch {}
+    }
+
+    await this.projectRepo.remove(project);
+    return { ok: true };
   }
 }

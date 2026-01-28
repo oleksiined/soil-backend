@@ -1,30 +1,29 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 
-import { MissionsModule } from './missions/missions.module';
 import { FoldersModule } from './folders/folders.module';
 import { ProjectsModule } from './projects/projects.module';
 import { KmlLayersModule } from './kml-layers/kml-layers.module';
 
-import { Mission } from './missions/entities/mission.entity';
-import { Folder } from './folders/entities/folder.entity';
-import { Project } from './projects/entities/project.entity';
-import { KmlLayer } from './kml-layers/entities/kml-layer.entity';
-
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: '4893',
-      database: 'soil',
-      entities: [Mission, Folder, Project, KmlLayer],
-      synchronize: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env', // бере .env з кореня soil-backend
     }),
 
-    MissionsModule,
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT || 5432),
+      username: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      autoLoadEntities: true,
+      synchronize: false,
+    }),
+
     FoldersModule,
     ProjectsModule,
     KmlLayersModule,

@@ -1,7 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
 
-@Entity('folders')
+@Entity({ name: 'folders' })
 export class Folder {
   @PrimaryGeneratedColumn()
   id: number;
@@ -9,11 +9,11 @@ export class Folder {
   @Column({ type: 'text' })
   name: string;
 
-  @CreateDateColumn()
-  created_at: Date;
-
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   isArchived: boolean;
+
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
 
   @OneToMany(() => Project, (p) => p.folder)
   projects: Project[];

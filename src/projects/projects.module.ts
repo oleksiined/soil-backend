@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ProjectsService } from './projects.service';
-import { ProjectsController } from './projects.controller';
+
 import { Project } from './entities/project.entity';
-import { Folder } from '../folders/entities/folder.entity';
+import { KmlLayer } from './entities/kml-layer.entity';
+
+import { ProjectsController } from './projects.controller';
+import { ProjectsService } from './projects.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Project, Folder])],
+  imports: [TypeOrmModule.forFeature([Project, KmlLayer])],
   controllers: [ProjectsController],
   providers: [ProjectsService],
 })

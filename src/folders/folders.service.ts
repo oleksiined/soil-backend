@@ -1,57 +1,83 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 
 import { Folder } from './entities/folder.entity';
-import { CreateFolderDto } from './dto/create-folder.dto';
-import { UpdateFolderDto } from './dto/update-folder.dto';
+import { Project } from '../projects/entities/project.entity';
+import { KmlLayer } from '../projects/entities/kml-layer.entity';
 
 @Injectable()
 export class FoldersService {
-  constructor(@InjectRepository(Folder) private repo: Repository<Folder>) {}
+  constructor(
+    @InjectRepository(Folder) private readonly folderRepo: Repository<Folder>,
+    @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
+    @InjectRepository(KmlLayer) private readonly kmlRepo: Repository<KmlLayer>,
+  ) {}
 
-  create(dto: CreateFolderDto) {
-    if (!dto?.name) throw new BadRequestException('name is required');
-    return this.repo.save(this.repo.create(dto));
+  async getFolders(includeArchived: boolean) {
+    const foldersAll = await this.folderRepo.find({ order: { id: 'ASC' } });
+    const folders = includeArchived ? foldersAll : foldersAll.filter((f) => !f.isArchived);
+
+    const folderIds = foldersAll.map((f) => f.id);
+
+    const projects = folderIds.length
+      ? await this.projectRepo.find({
+          where: includeArchived
+            ? { folderId: In(folderIds) }
+            : { folderId: In(folderIds), isArchived: false },
+          order: { id: 'ASC' },
+        })
+      : [];
+
+    const byFolder: Record<number, Project[]> = {};
+    for (const p of projects) {
+      const fid = p.folderId ?? 0;
+      byFolder[fid] = byFolder[fid] || [];
+      byFolder[fid].push(p);
+    }
+
+    return folders.map((f) => ({ ...f, projects: byFolder[f.id] || [] }));
   }
 
-  // ✅ за замовчуванням показуємо тільки НЕархівні
-  findAll(includeArchived = false) {
-    if (includeArchived) return this.repo.find({ relations: { projects: true } });
-
-    return this.repo.find({
-      where: { isArchived: false },
-      relations: { projects: true },
-    });
+  async createFolder(name: string) {
+    const folder = this.folderRepo.create({ name: String(name || '').trim() });
+    return this.folderRepo.save(folder);
   }
 
-  findOne(id: number) {
-    return this.repo.findOne({ where: { id }, relations: { projects: true } });
+  async setArchived(id: number, isArchived: boolean) {
+    const folder = await this.folderRepo.findOne({ where: { id } });
+    if (!folder) throw new NotFoundException('Folder not found');
+
+    folder.isArchived = isArchived;
+    await this.folderRepo.save(folder);
+
+    return { ok: true };
   }
 
-  async update(id: number, dto: UpdateFolderDto) {
-    await this.repo.update({ id }, dto as any);
-    return this.findOne(id);
-  }
+  async deleteFolderDeep(folderId: number) {
+    const folder = await this.folderRepo.findOne({ where: { id: folderId } });
+    if (!folder) throw new NotFoundException('Folder not found');
 
-  async remove(id: number) {
-    const row = await this.repo.findOne({ where: { id } });
-    if (!row) throw new NotFoundException('Folder not found');
-    await this.repo.delete({ id });
-    return { deleted: true, id };
-  }
+    const projects = await this.projectRepo.find({ where: { folderId } });
+    const projectIds = projects.map((p) => p.id);
 
-  async archive(id: number) {
-    const row = await this.repo.findOne({ where: { id } });
-    if (!row) throw new NotFoundException('Folder not found');
-    await this.repo.update({ id }, { isArchived: true });
-    return { archived: true, id };
-  }
+    if (projectIds.length) {
+      const layers = await this.kmlRepo.find({ where: { projectId: In(projectIds) } });
 
-  async unarchive(id: number) {
-    const row = await this.repo.findOne({ where: { id } });
-    if (!row) throw new NotFoundException('Folder not found');
-    await this.repo.update({ id }, { isArchived: false });
-    return { archived: false, id };
+      for (const l of layers) {
+        const storedPath = l.path || '';
+        if (!storedPath) continue;
+
+        const abs = path.isAbsolute(storedPath) ? storedPath : path.join(process.cwd(), storedPath);
+        try {
+          await fs.unlink(abs);
+        } catch {}
+      }
+    }
+
+    await this.folderRepo.remove(folder);
+    return { ok: true };
   }
 }

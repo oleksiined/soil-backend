@@ -1,63 +1,85 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
-  NotFoundException,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
-  Query,
+  Delete,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
+
 import { ProjectsService } from './projects.service';
-import { CreateProjectDto } from './dto/create-project.dto';
-import { UpdateProjectDto } from './dto/update-project.dto';
 
-@Controller('projects')
+function safeName(name: string) {
+  return name.replace(/[^\w.\-]+/g, '_');
+}
+
+@Controller()
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(private readonly service: ProjectsService) {}
 
-  @Post()
-  create(@Body() body: CreateProjectDto) {
-    return this.projectsService.create(body);
+  // create project
+  @Post('folders/:folderId/projects')
+  createProject(
+    @Param('folderId', ParseIntPipe) folderId: number,
+    @Body() body: { name: string },
+  ) {
+    return this.service.createProject(folderId, body.name);
   }
 
-  // GET /projects?includeArchived=1
-  @Get()
-  findAll(@Query('includeArchived') includeArchived?: string) {
-    const flag = includeArchived === '1' || includeArchived === 'true';
-    return this.projectsService.findAll(flag);
+  // list KML layers for project
+  @Get('projects/:id/kml-layers')
+  getProjectKml(@Param('id', ParseIntPipe) projectId: number) {
+    return this.service.getProjectKmlLayers(projectId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.projectsService.findOne(Number(id));
+  // upload KML layer to project  ✅ ОЦЕ ТЕ, ЧОГО НЕ ВИСТАЧАЛО
+  @Post('projects/:id/kml-layers')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const dir = path.join(process.cwd(), 'uploads', 'kml');
+          fs.mkdirSync(dir, { recursive: true });
+          cb(null, dir);
+        },
+        filename: (req, file, cb) => {
+          const stamp = Date.now();
+          const base = safeName(file.originalname || 'file.kml');
+          cb(null, `${stamp}_${base}`);
+        },
+      }),
+      limits: { fileSize: 50 * 1024 * 1024 },
+    }),
+  )
+  uploadKml(
+    @Param('id', ParseIntPipe) projectId: number,
+    @Body() body: { type?: string },
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.service.uploadProjectKml(projectId, body?.type, file);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() body: UpdateProjectDto) {
-    return this.projectsService.update(Number(id), body);
+  // archive/unarchive/delete project
+  @Patch('projects/:id/archive')
+  archive(@Param('id', ParseIntPipe) id: number) {
+    return this.service.setArchived(id, true);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.projectsService.remove(Number(id));
+  @Patch('projects/:id/unarchive')
+  unarchive(@Param('id', ParseIntPipe) id: number) {
+    return this.service.setArchived(id, false);
   }
 
-  @Post(':id/archive')
-  archive(@Param('id') id: string) {
-    return this.projectsService.archive(Number(id));
-  }
-
-  @Post(':id/unarchive')
-  unarchive(@Param('id') id: string) {
-    return this.projectsService.unarchive(Number(id));
-  }
-
-  @Get(':id/kml-layers')
-  async kmlLayers(@Param('id') id: string) {
-    const project = await this.projectsService.getKmlLayers(Number(id));
-    if (!project) throw new NotFoundException('Project not found');
-    return project.kmlLayers;
+  @Delete('projects/:id')
+  deleteProjectDeep(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteProjectDeep(id);
   }
 }
