@@ -11,9 +11,6 @@ export class FolderDto {
   @ApiProperty()
   isArchived: boolean;
 
-  @ApiProperty()
-  created_at: string;
-
   @ApiProperty({ type: () => [ProjectDto] })
   projects: ProjectDto[];
 }

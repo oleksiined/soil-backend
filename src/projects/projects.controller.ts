@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -24,14 +25,10 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UploadKmlDto } from './dto/upload-kml.dto';
 import { ProjectDetailsDto } from './dto/project-details.dto';
 import { ProjectsSyncDto } from './dto/projects-sync.dto';
+import { SyncV2Dto } from './dto/sync-v2.dto';
 
 function safeName(name: string) {
   return name.replace(/[^\w.\-]+/g, '_');
-}
-
-function toInt(v: unknown, fallback: number) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
 @ApiTags('projects')
@@ -42,24 +39,47 @@ export class ProjectsController {
   @ApiOkResponse({ type: ProjectsSyncDto })
   @ApiQuery({
     name: 'sinceProjectId',
-    required: false,
+    required: true,
     description: 'Return projects with id > sinceProjectId (default 0)',
-    schema: { type: 'number', example: 0 },
+    schema: { type: 'number' },
   })
   @ApiQuery({
     name: 'sinceLayerId',
-    required: false,
+    required: true,
     description: 'Return kml layers with id > sinceLayerId (default 0)',
-    schema: { type: 'number', example: 0 },
+    schema: { type: 'number' },
   })
   @Get('sync/projects')
   syncProjects(
     @Query('sinceProjectId') sinceProjectId?: string,
     @Query('sinceLayerId') sinceLayerId?: string,
   ) {
-    const pId = toInt(sinceProjectId, 0);
-    const lId = toInt(sinceLayerId, 0);
-    return this.service.syncProjectsSinceId(pId, lId);
+    const p = Number(sinceProjectId ?? '0');
+    const l = Number(sinceLayerId ?? '0');
+    return this.service.syncProjectsSinceId(Number.isFinite(p) ? p : 0, Number.isFinite(l) ? l : 0);
+  }
+
+  @ApiOkResponse({ type: SyncV2Dto })
+  @ApiQuery({
+    name: 'since',
+    required: false,
+    description: 'ISO datetime. If omitted/invalid -> defaults to 2000-01-01T00:00:00.000Z',
+    schema: { type: 'string' },
+  })
+  @Get('sync/v2')
+  syncV2(@Query('since') since?: string) {
+    const fallback = new Date('2000-01-01T00:00:00.000Z');
+
+    if (!since || !String(since).trim()) {
+      return this.service.syncV2Since(fallback);
+    }
+
+    const d = new Date(String(since));
+    if (Number.isNaN(d.getTime())) {
+      return this.service.syncV2Since(fallback);
+    }
+
+    return this.service.syncV2Since(d);
   }
 
   @ApiOkResponse({ type: ProjectDto })

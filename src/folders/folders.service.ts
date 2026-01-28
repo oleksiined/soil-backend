@@ -7,6 +7,26 @@ import * as path from 'path';
 import { Folder } from './entities/folder.entity';
 import { Project } from '../projects/entities/project.entity';
 import { KmlLayer } from '../projects/entities/kml-layer.entity';
+import { FolderDto } from './dto/folder.dto';
+import { ProjectDto } from '../projects/dto/project.dto';
+
+function toProjectDto(p: Project): ProjectDto {
+  return {
+    id: p.id,
+    folderId: p.folderId as number,
+    name: p.name,
+    isArchived: p.isArchived,
+  };
+}
+
+function toFolderDto(f: Folder, projects: Project[]): FolderDto {
+  return {
+    id: f.id,
+    name: f.name,
+    isArchived: f.isArchived,
+    projects: projects.map(toProjectDto),
+  };
+}
 
 @Injectable()
 export class FoldersService {
@@ -16,7 +36,7 @@ export class FoldersService {
     @InjectRepository(KmlLayer) private readonly kmlRepo: Repository<KmlLayer>,
   ) {}
 
-  async getFolders(includeArchived: boolean) {
+  async getFolders(includeArchived: boolean): Promise<FolderDto[]> {
     const foldersAll = await this.folderRepo.find({ order: { id: 'ASC' } });
     const folders = includeArchived ? foldersAll : foldersAll.filter((f) => !f.isArchived);
 
@@ -38,16 +58,16 @@ export class FoldersService {
       byFolder[fid].push(p);
     }
 
-    return folders.map((f) => ({ ...f, projects: byFolder[f.id] || [] }));
+    return folders.map((f) => toFolderDto(f, byFolder[f.id] || []));
   }
 
-  async createFolder(name: string) {
+  async createFolder(name: string): Promise<FolderDto> {
     const folder = this.folderRepo.create({ name: String(name || '').trim() });
     const saved = await this.folderRepo.save(folder);
-    return { ...saved, projects: [] };
+    return toFolderDto(saved, []);
   }
 
-  async setArchived(id: number, isArchived: boolean) {
+  async setArchived(id: number, isArchived: boolean): Promise<FolderDto> {
     const folder = await this.folderRepo.findOne({ where: { id } });
     if (!folder) throw new NotFoundException('Folder not found');
 
@@ -59,7 +79,7 @@ export class FoldersService {
       order: { id: 'ASC' },
     });
 
-    return { ...saved, projects };
+    return toFolderDto(saved, projects);
   }
 
   async deleteFolderDeep(folderId: number) {

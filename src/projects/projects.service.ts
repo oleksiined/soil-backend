@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan } from 'typeorm';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
@@ -10,6 +9,7 @@ import { KmlLayer, KmlType } from './entities/kml-layer.entity';
 import { ProjectDto } from './dto/project.dto';
 import { KmlLayerDto } from './dto/kml-layer.dto';
 import { ProjectsSyncDto } from './dto/projects-sync.dto';
+import { SyncV2Dto } from './dto/sync-v2.dto';
 
 function normalizeType(v?: string): KmlType {
   const t = String(v || '').toLowerCase().trim();
@@ -75,6 +75,7 @@ export class ProjectsService {
     };
   }
 
+  // старий sync (залишається як був)
   async syncProjectsSinceId(
     sinceProjectId: number,
     sinceLayerId: number,
@@ -94,6 +95,36 @@ export class ProjectsService {
     });
 
     const layers = projectIds.length ? layersById.filter((l) => projectIds.includes(l.projectId)) : [];
+
+    return {
+      serverTime: new Date().toISOString(),
+      projects,
+      kmlLayers: layers.map(toKmlLayerDto),
+    };
+  }
+
+  // ✅ Sync v2 через QueryBuilder (без TS помилки про updated_at)
+  async syncV2Since(since: Date): Promise<SyncV2Dto> {
+    const projectsRaw = await this.projectRepo
+      .createQueryBuilder('p')
+      .where('p.updated_at > :since', { since: since.toISOString() })
+      .orderBy('p.updated_at', 'ASC')
+      .addOrderBy('p.id', 'ASC')
+      .getMany();
+
+    const validProjects = projectsRaw.filter((p) => p.folderId != null);
+    const projects = validProjects.map(toProjectDto);
+    const projectIds = validProjects.map((p) => p.id);
+
+    const layersRaw = await this.kmlRepo
+      .createQueryBuilder('k')
+      .where('k.updated_at > :since', { since: since.toISOString() })
+      .orderBy('k.updated_at', 'ASC')
+      .addOrderBy('k.id', 'ASC')
+      .getMany();
+
+    const layers =
+      projectIds.length ? layersRaw.filter((l) => projectIds.includes(l.projectId)) : [];
 
     return {
       serverTime: new Date().toISOString(),
