@@ -9,7 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FoldersService } from './folders.service';
 import { FolderDto } from './dto/folder.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
@@ -20,6 +20,12 @@ export class FoldersController {
   constructor(private readonly service: FoldersService) {}
 
   @ApiOkResponse({ type: [FolderDto] })
+  @ApiQuery({
+    name: 'includeArchived',
+    required: false,
+    schema: { type: 'string', example: 'false' },
+    description: 'If true/1 -> include archived folders/projects',
+  })
   @Get()
   getFolders(@Query('includeArchived') includeArchived?: string) {
     const flag = includeArchived === '1' || includeArchived === 'true';
