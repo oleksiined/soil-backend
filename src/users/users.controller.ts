@@ -1,39 +1,44 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+
 import { UsersService } from './users.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { CreateUserDto } from './dto/create-user.dto';
-import { SetActiveDto } from './dto/set-active.dto';
-import { SetPasswordDto } from './dto/set-password.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
-@Roles('ADMIN')
 @Controller('users')
 export class UsersController {
   constructor(private readonly service: UsersService) {}
 
-  @ApiOkResponse({ schema: { example: [{ id: 1, username: 'driver1', role: 'DRIVER', isActive: false, created_at: '...' }] } })
+  @ApiOkResponse({
+    schema: {
+      example: [
+        { id: 1, username: 'admin', role: 'ADMIN', isActive: true },
+        { id: 2, username: 'driver1', role: 'DRIVER', isActive: false },
+      ],
+    },
+  })
   @Get()
-  list() {
-    return this.service.listUsers();
+  findAll() {
+    return this.service.findAll();
   }
 
-  @ApiOkResponse({ schema: { example: { id: 2, username: 'driver2', role: 'DRIVER', isActive: true, created_at: '...' } } })
-  @Post()
-  create(@Body() body: CreateUserDto) {
-    return this.service.createUser(body.username, body.password, body.role);
+  @ApiOkResponse({
+    schema: {
+      example: { id: 2, username: 'driver1', role: 'DRIVER', isActive: true },
+    },
+  })
+  @Patch(':id/activate')
+  activate(@Param('id', ParseIntPipe) id: number) {
+    return this.service.setActive(id, true);
   }
 
-  @ApiOkResponse({ schema: { example: { id: 1, username: 'driver1', role: 'DRIVER', isActive: true, created_at: '...' } } })
-  @Patch(':id/active')
-  setActive(@Param('id', ParseIntPipe) id: number, @Body() body: SetActiveDto) {
-    return this.service.setActive(id, body.isActive);
-  }
-
-  @ApiOkResponse({ schema: { example: { ok: true } } })
-  @Patch(':id/password')
-  setPassword(@Param('id', ParseIntPipe) id: number, @Body() body: SetPasswordDto) {
-    return this.service.setPassword(id, body.password);
+  @ApiOkResponse({
+    schema: {
+      example: { id: 2, username: 'driver1', role: 'DRIVER', isActive: false },
+    },
+  })
+  @Patch(':id/deactivate')
+  deactivate(@Param('id', ParseIntPipe) id: number) {
+    return this.service.setActive(id, false);
   }
 }
