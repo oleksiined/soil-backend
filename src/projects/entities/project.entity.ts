@@ -1,28 +1,37 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Folder } from '../../folders/entities/folder.entity';
-import { KmlLayer } from './kml-layer.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  JoinColumn,
+} from 'typeorm';
+import { FolderEntity } from '../../folders/entities/folder.entity';
+import { KmlLayerEntity } from '../../kml-layers/entities/kml-layer.entity';
 
-@Entity({ name: 'projects' })
-export class Project {
+@Entity('projects')
+export class ProjectEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'folder_id', type: 'int', nullable: true })
-  folderId: number | null;
-
-  @ManyToOne(() => Folder, (f) => f.projects, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'folder_id' })
-  folder: Folder;
-
-  @Column({ type: 'text' })
+  @Column()
   name: string;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ default: false })
   isArchived: boolean;
 
-  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
-  created_at: Date;
+  @ManyToOne(() => FolderEntity, (folder) => folder.projects, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'folder_id' })
+  folder: FolderEntity;
 
-  @OneToMany(() => KmlLayer, (k) => k.project)
-  kmlLayers: KmlLayer[];
+  @OneToMany(() => KmlLayerEntity, (layer) => layer.project)
+  kmlLayers: KmlLayerEntity[];
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 }

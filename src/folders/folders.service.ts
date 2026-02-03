@@ -1,108 +1,87 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-
-import { Folder } from './entities/folder.entity';
-import { Project } from '../projects/entities/project.entity';
-import { KmlLayer } from '../projects/entities/kml-layer.entity';
-import { FolderDto } from './dto/folder.dto';
-import { ProjectDto } from '../projects/dto/project.dto';
-
-function toProjectDto(p: Project): ProjectDto {
-  return {
-    id: p.id,
-    folderId: p.folderId as number,
-    name: p.name,
-    isArchived: p.isArchived,
-  };
-}
-
-function toFolderDto(f: Folder, projects: Project[]): FolderDto {
-  return {
-    id: f.id,
-    name: f.name,
-    isArchived: f.isArchived,
-    projects: projects.map(toProjectDto),
-  };
-}
+import { Repository } from 'typeorm';
+import { FolderEntity } from './entities/folder.entity';
 
 @Injectable()
 export class FoldersService {
+  private readonly logger = new Logger(FoldersService.name);
+
   constructor(
-    @InjectRepository(Folder) private readonly folderRepo: Repository<Folder>,
-    @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
-    @InjectRepository(KmlLayer) private readonly kmlRepo: Repository<KmlLayer>,
+    @InjectRepository(FolderEntity)
+    private readonly folders: Repository<FolderEntity>,
   ) {}
 
-  async getFolders(includeArchived: boolean): Promise<FolderDto[]> {
-    const foldersAll = await this.folderRepo.find({ order: { id: 'ASC' } });
-    const folders = includeArchived ? foldersAll : foldersAll.filter((f) => !f.isArchived);
+  async getFolders(includeArchived = false): Promise<FolderEntity[]> {
+    try {
+      const qb = this.folders
+        .createQueryBuilder('f')
+        .leftJoinAndSelect('f.projects', 'p')
+        .orderBy('f.id', 'ASC')
+        .addOrderBy('p.id', 'ASC');
 
-    const folderIds = foldersAll.map((f) => f.id);
-
-    const projects = folderIds.length
-      ? await this.projectRepo.find({
-          where: includeArchived
-            ? { folderId: In(folderIds) }
-            : { folderId: In(folderIds), isArchived: false },
-          order: { id: 'ASC' },
-        })
-      : [];
-
-    const byFolder: Record<number, Project[]> = {};
-    for (const p of projects) {
-      const fid = p.folderId ?? 0;
-      byFolder[fid] = byFolder[fid] || [];
-      byFolder[fid].push(p);
-    }
-
-    return folders.map((f) => toFolderDto(f, byFolder[f.id] || []));
-  }
-
-  async createFolder(name: string): Promise<FolderDto> {
-    const folder = this.folderRepo.create({ name: String(name || '').trim() });
-    const saved = await this.folderRepo.save(folder);
-    return toFolderDto(saved, []);
-  }
-
-  async setArchived(id: number, isArchived: boolean): Promise<FolderDto> {
-    const folder = await this.folderRepo.findOne({ where: { id } });
-    if (!folder) throw new NotFoundException('Folder not found');
-
-    folder.isArchived = isArchived;
-    const saved = await this.folderRepo.save(folder);
-
-    const projects = await this.projectRepo.find({
-      where: { folderId: id, isArchived: false },
-      order: { id: 'ASC' },
-    });
-
-    return toFolderDto(saved, projects);
-  }
-
-  async deleteFolderDeep(folderId: number) {
-    const folder = await this.folderRepo.findOne({ where: { id: folderId } });
-    if (!folder) throw new NotFoundException('Folder not found');
-
-    const projects = await this.projectRepo.find({ where: { folderId } });
-    const projectIds = projects.map((p) => p.id);
-
-    if (projectIds.length) {
-      const layers = await this.kmlRepo.find({ where: { projectId: In(projectIds) } });
-
-      for (const l of layers) {
-        const storedPath = l.path || '';
-        if (!storedPath) continue;
-
-        const abs = path.isAbsolute(storedPath) ? storedPath : path.join(process.cwd(), storedPath);
-        try {
-          await fs.unlink(abs);
-        } catch {}
+      if (!includeArchived) {
+        qb.where('f.isArchived = :arch', { arch: false });
       }
-    }
 
-    await this.folderRepo.remove(folder);
+      return await qb.getMany();
+    } catch (e: any) {
+      this.logger.error('Failed to load folders from database');
+      this.logger.error(e?.message || e);
+      if (e?.query) this.logger.error(`SQL: ${e.query}`);
+      if (e?.parameters) this.logger.error(`Params: ${JSON.stringify(e.parameters)}`);
+      throw new InternalServerErrorException('Failed to load folders from database');
+    }
+  }
+
+  async createFolder(name: string): Promise<FolderEntity> {
+    try {
+      const folder: FolderEntity = this.folders.create({
+        name,
+        isArchived: false,
+      } as Partial<FolderEntity>) as FolderEntity;
+
+      const saved: FolderEntity = await this.folders.save(folder);
+      return saved;
+    } catch (e: any) {
+      this.logger.error('Failed to create folder');
+      this.logger.error(e?.message || e);
+      if (e?.query) this.logger.error(`SQL: ${e.query}`);
+      if (e?.parameters) this.logger.error(`Params: ${JSON.stringify(e.parameters)}`);
+      throw new InternalServerErrorException('Failed to create folder');
+    }
+  }
+
+  async setArchived(id: number, archived: boolean): Promise<{ ok: true }> {
+    try {
+      await this.folders.update({ id } as any, { isArchived: archived } as any);
+      return { ok: true };
+    } catch (e: any) {
+      this.logger.error('Failed to update folder archive flag');
+      this.logger.error(e?.message || e);
+      if (e?.query) this.logger.error(`SQL: ${e.query}`);
+      if (e?.parameters) this.logger.error(`Params: ${JSON.stringify(e.parameters)}`);
+      throw new InternalServerErrorException('Failed to update folder');
+    }
+  }
+
+  async deleteFolderDeep(id: number): Promise<{ ok: true }> {
+    try {
+      const folder = await this.folders.findOne({
+        where: { id } as any,
+        relations: { projects: true } as any,
+      });
+
+      if (!folder) return { ok: true };
+
+      await this.folders.remove(folder);
+      return { ok: true };
+    } catch (e: any) {
+      this.logger.error('Failed to delete folder');
+      this.logger.error(e?.message || e);
+      if (e?.query) this.logger.error(`SQL: ${e.query}`);
+      if (e?.parameters) this.logger.error(`Params: ${JSON.stringify(e.parameters)}`);
+      throw new InternalServerErrorException('Failed to delete folder');
+    }
   }
 }

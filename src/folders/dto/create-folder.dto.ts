@@ -1,12 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsString, MinLength, MaxLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
 
 export class CreateFolderDto {
-  @ApiProperty()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @ApiProperty({
+    example: 'My first folder',
+    description: 'Folder name',
+  })
   @IsString()
   @MinLength(1)
-  @MaxLength(120)
   name: string;
 }

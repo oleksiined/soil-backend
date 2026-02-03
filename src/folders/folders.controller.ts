@@ -4,56 +4,47 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FoldersService } from './folders.service';
-import { FolderDto } from './dto/folder.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
 
-@ApiTags('folders')
+@ApiTags('Folders')
 @Controller('folders')
 export class FoldersController {
   constructor(private readonly service: FoldersService) {}
 
-  @ApiOkResponse({ type: [FolderDto] })
-  @ApiQuery({
-    name: 'includeArchived',
-    required: false,
-    schema: { type: 'string', example: 'false' },
-    description: 'If true/1 -> include archived folders/projects',
-  })
   @Get()
-  getFolders(@Query('includeArchived') includeArchived?: string) {
-    const flag = includeArchived === '1' || includeArchived === 'true';
-    return this.service.getFolders(flag);
+  @ApiQuery({
+    name: 'all',
+    required: false,
+    type: Boolean,
+    description: 'If true – include archived folders',
+  })
+  getFolders(@Query('all') all = 'false') {
+    return this.service.getFolders(all === 'true');
   }
 
-  @ApiOkResponse({ type: FolderDto })
   @Post()
-  createFolder(@Body() body: CreateFolderDto) {
+  create(@Body() body: CreateFolderDto) {
     return this.service.createFolder(body.name);
   }
 
-  @ApiOkResponse({ type: FolderDto })
   @Patch(':id/archive')
-  archive(@Param('id', ParseIntPipe) id: number) {
-    return this.service.setArchived(id, true);
+  archive(@Param('id') id: string) {
+    return this.service.setArchived(Number(id), true);
   }
 
-  @ApiOkResponse({ type: FolderDto })
   @Patch(':id/unarchive')
-  unarchive(@Param('id', ParseIntPipe) id: number) {
-    return this.service.setArchived(id, false);
+  unarchive(@Param('id') id: string) {
+    return this.service.setArchived(Number(id), false);
   }
 
-  @ApiOkResponse({ schema: { example: { ok: true, deletedId: 123 } } })
   @Delete(':id')
-  async deleteDeep(@Param('id', ParseIntPipe) id: number) {
-    await this.service.deleteFolderDeep(id);
-    return { ok: true, deletedId: id };
+  delete(@Param('id') id: string) {
+    return this.service.deleteFolderDeep(Number(id));
   }
 }

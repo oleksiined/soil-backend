@@ -1,167 +1,105 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-
-import { User } from './entities/user.entity';
-import { RefreshToken } from './entities/refresh-token.entity';
-
-function parseTtlToSeconds(raw: string | undefined, fallbackSeconds: number): number {
-  const s = String(raw || '').trim().toLowerCase();
-  if (!s) return fallbackSeconds;
-  if (/^\d+$/.test(s)) return Math.max(1, Number(s));
-  const m = s.match(/^(\d+)\s*([smhdw])$/);
-  if (!m) return fallbackSeconds;
-
-  const n = Number(m[1]);
-  const unit = m[2];
-  const mult =
-    unit === 's' ? 1 :
-    unit === 'm' ? 60 :
-    unit === 'h' ? 60 * 60 :
-    unit === 'd' ? 60 * 60 * 24 :
-    unit === 'w' ? 60 * 60 * 24 * 7 :
-    1;
-
-  return Math.max(1, n * mult);
-}
+import { LoginDto } from './dto/login.dto';
+import { RefreshDto } from './dto/refresh.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    @InjectRepository(User) private readonly users: Repository<User>,
-    @InjectRepository(RefreshToken) private readonly refreshRepo: Repository<RefreshToken>,
-    private readonly jwt: JwtService,
-  ) {}
+  constructor(private readonly jwt: JwtService) {}
 
-  private accessSecret() {
-    return process.env.JWT_ACCESS_SECRET || 'dev_access_secret';
-  }
+  async login(dto: LoginDto) {
+    const adminUsername = process.env.ADMIN_USERNAME;
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
-  private refreshSecret() {
-    return process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret';
-  }
+    if (!adminUsername || !adminPassword) {
+      throw new UnauthorizedException('Admin credentials are not configured');
+    }
 
-  private accessTtlSeconds() {
-    return parseTtlToSeconds(process.env.JWT_ACCESS_TTL, 15 * 60);
-  }
+    if (dto.username !== adminUsername || dto.password !== adminPassword) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-  private refreshTtlSeconds() {
-    return parseTtlToSeconds(process.env.JWT_REFRESH_TTL, 30 * 24 * 60 * 60);
-  }
+    const payload = {
+      sub: 0,
+      username: dto.username,
+      role: 'ADMIN',
+    };
 
-  private signAccess(user: User) {
-    return this.jwt.sign(
-      { sub: user.id, username: user.username, role: user.role },
-      { secret: this.accessSecret(), expiresIn: this.accessTtlSeconds() },
-    );
-  }
+    const accessTtlSec = this.parseTtlToSeconds(process.env.JWT_ACCESS_TTL ?? '15m');
+    const refreshTtlSec = this.parseTtlToSeconds(process.env.JWT_REFRESH_TTL ?? '30d');
 
-  private signRefresh(user: User) {
-    return this.jwt.sign(
-      { sub: user.id, type: 'refresh' },
-      { secret: this.refreshSecret(), expiresIn: this.refreshTtlSeconds() },
-    );
-  }
+    const accessToken = await this.jwt.signAsync(payload, {
+      secret: process.env.JWT_ACCESS_SECRET,
+      expiresIn: accessTtlSec,
+    });
 
-  private toUserDto(user: User) {
+    const refreshToken = await this.jwt.signAsync(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: refreshTtlSec,
+    });
+
     return {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      isActive: user.isActive,
+      tokenType: 'Bearer',
+      accessToken,
+      refreshToken,
+      expiresIn: accessTtlSec,
     };
   }
 
-  async register(usernameRaw: string, passwordRaw: string) {
-    const username = String(usernameRaw || '').trim();
-    const password = String(passwordRaw || '');
+  async refresh(dto: RefreshDto) {
+    if (!process.env.JWT_REFRESH_SECRET) {
+      throw new UnauthorizedException('Refresh secret is not configured');
+    }
 
-    if (!username) throw new BadRequestException('Username is required');
-    if (username.length < 3) throw new BadRequestException('Username is too short');
-    if (!password || password.length < 6) throw new BadRequestException('Password is too short');
-
-    const exists = await this.users.findOne({ where: { username } });
-    if (exists) throw new BadRequestException('Username already exists');
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const u = await this.users.save(
-      this.users.create({
-        username,
-        passwordHash,
-        role: 'DRIVER',
-        isActive: false,
-      }),
-    );
-
-    return { user: this.toUserDto(u) };
-  }
-
-  async login(username: string, password: string, deviceId?: string) {
-    const u = await this.users.findOne({ where: { username } });
-    if (!u || !u.isActive) throw new UnauthorizedException('Invalid credentials');
-
-    const ok = await bcrypt.compare(password, u.passwordHash);
-    if (!ok) throw new UnauthorizedException('Invalid credentials');
-
-    const accessToken = this.signAccess(u);
-    const refreshToken = this.signRefresh(u);
-
-    const tokenHash = await bcrypt.hash(refreshToken, 10);
-    const expiresAt = new Date(Date.now() + this.refreshTtlSeconds() * 1000);
-
-    await this.refreshRepo.save(
-      this.refreshRepo.create({
-        userId: u.id,
-        tokenHash,
-        deviceId: deviceId ? String(deviceId) : null,
-        expiresAt,
-      }),
-    );
-
-    return { accessToken, refreshToken, user: this.toUserDto(u) };
-  }
-
-  async refresh(refreshToken: string, deviceId?: string) {
     let payload: any;
+
     try {
-      payload = this.jwt.verify(refreshToken, { secret: this.refreshSecret() });
+      payload = await this.jwt.verifyAsync(dto.refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
     } catch {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    if (!payload || payload.type !== 'refresh') throw new UnauthorizedException('Invalid token');
+    const accessTtlSec = this.parseTtlToSeconds(process.env.JWT_ACCESS_TTL ?? '15m');
 
-    const u = await this.users.findOne({ where: { id: payload.sub } });
-    if (!u || !u.isActive) throw new UnauthorizedException('Invalid token');
+    const accessToken = await this.jwt.signAsync(
+      {
+        sub: payload.sub,
+        username: payload.username,
+        role: payload.role,
+      },
+      {
+        secret: process.env.JWT_ACCESS_SECRET,
+        expiresIn: accessTtlSec,
+      },
+    );
 
-    const tokens = await this.refreshRepo.find({ where: { userId: u.id } });
-
-    let found = false;
-    for (const t of tokens) {
-      const match = await bcrypt.compare(refreshToken, t.tokenHash);
-      if (!match) continue;
-
-      if (t.expiresAt.getTime() < Date.now()) throw new UnauthorizedException('Expired token');
-      if (t.deviceId && deviceId && t.deviceId !== String(deviceId)) {
-        throw new UnauthorizedException('Invalid token');
-      }
-
-      found = true;
-      break;
-    }
-
-    if (!found) throw new UnauthorizedException('Invalid token');
-
-    const accessToken = this.signAccess(u);
-    return { accessToken, user: this.toUserDto(u) };
+    return {
+      tokenType: 'Bearer',
+      accessToken,
+      expiresIn: accessTtlSec,
+    };
   }
 
-  async me(userId: number) {
-    const u = await this.users.findOne({ where: { id: userId } });
-    if (!u || !u.isActive) throw new UnauthorizedException('Unauthorized');
-    return this.toUserDto(u);
+  private parseTtlToSeconds(value: string): number {
+    const v = value.trim().toLowerCase();
+
+    const m = v.match(/^(\d+)(s|m|h|d)$/);
+    if (!m) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) return Math.floor(n);
+      return 900;
+    }
+
+    const num = Number(m[1]);
+    const unit = m[2];
+
+    if (!Number.isFinite(num) || num <= 0) return 900;
+
+    if (unit === 's') return num;
+    if (unit === 'm') return num * 60;
+    if (unit === 'h') return num * 60 * 60;
+    return num * 60 * 60 * 24;
   }
 }

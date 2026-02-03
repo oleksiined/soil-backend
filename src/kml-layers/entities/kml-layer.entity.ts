@@ -1,29 +1,35 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Project } from '../../projects/entities/project.entity';
-
-export type KmlLayerType = 'tracks' | 'points' | 'centroid' | 'zones';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+  JoinColumn,
+} from 'typeorm';
+import { ProjectEntity } from '../../projects/entities/project.entity';
 
 @Entity('kml_layers')
-export class KmlLayer {
+export class KmlLayerEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  projectId: number;
-
-  @ManyToOne(() => Project, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'projectId' })
-  project: Project;
+  name: string;
 
   @Column({ type: 'text' })
-  type: KmlLayerType;
+  content: string;
 
-  @Column({ type: 'text' })
-  originalName: string;
+  @Column({ default: false })
+  isArchived: boolean;
 
-  @Column({ type: 'text' })
-  path: string;
+  @ManyToOne(() => ProjectEntity, (project) => project.kmlLayers, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'project_id' })
+  project: ProjectEntity;
 
-  @CreateDateColumn()
-  created_at: Date;
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 }

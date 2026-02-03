@@ -1,20 +1,30 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Project } from '../../projects/entities/project.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { ProjectEntity } from '../../projects/entities/project.entity';
 
-@Entity({ name: 'folders' })
-export class Folder {
+@Entity('folders')
+export class FolderEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'text' })
+  @Column()
   name: string;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ default: false })
   isArchived: boolean;
 
-  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
-  created_at: Date;
+  @OneToMany(() => ProjectEntity, (project) => project.folder)
+  projects: ProjectEntity[];
 
-  @OneToMany(() => Project, (p) => p.folder)
-  projects: Project[];
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 }

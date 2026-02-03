@@ -1,12 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { UserRole } from '../entities/user.entity';
 
 export class CreateUserDto {
-  @ApiProperty()
-  username: string;
-
-  @ApiProperty()
+  email: string;
   password: string;
-
-  @ApiProperty({ enum: ['ADMIN', 'DRIVER'], required: false })
-  role?: 'ADMIN' | 'DRIVER';
+  role?: UserRole;
 }
