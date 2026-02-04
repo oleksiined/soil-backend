@@ -1,6 +1,5 @@
 import {
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,6 +33,16 @@ export class ProjectsService {
     });
 
     return this.projects.save(project);
+  }
+
+  async getByFolder(folderId: number): Promise<ProjectEntity[]> {
+    return this.projects.find({
+      where: {
+        folder: { id: folderId },
+        isArchived: false,
+      },
+      order: { id: 'ASC' },
+    });
   }
 
   async getById(id: number): Promise<ProjectEntity> {
