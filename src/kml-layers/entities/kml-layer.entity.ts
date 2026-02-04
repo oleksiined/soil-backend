@@ -23,7 +23,9 @@ export class KmlLayerEntity {
   @Column({ default: false })
   isArchived: boolean;
 
-  @ManyToOne(() => ProjectEntity, (project) => project.kmlLayers, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ProjectEntity, (project) => project.kmlLayers, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'project_id' })
   project: ProjectEntity;
 

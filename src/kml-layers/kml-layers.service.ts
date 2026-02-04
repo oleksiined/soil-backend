@@ -27,14 +27,23 @@ export class KmlLayersService {
       project,
     });
 
-    return await this.layers.save(layer);
+    return this.layers.save(layer);
   }
 
   async getByProject(projectId: number): Promise<KmlLayerEntity[]> {
-    return await this.layers.find({
+    return this.layers.find({
       where: { project: { id: projectId }, isArchived: false },
       order: { id: 'ASC' },
     });
+  }
+
+  async getById(id: number): Promise<KmlLayerEntity> {
+    const layer = await this.layers.findOne({
+      where: { id },
+      relations: { project: true },
+    });
+    if (!layer) throw new NotFoundException('KML layer not found');
+    return layer;
   }
 
   async setArchived(id: number, archived: boolean): Promise<{ ok: true }> {
@@ -42,6 +51,14 @@ export class KmlLayersService {
     if (!layer) throw new NotFoundException('KML layer not found');
 
     await this.layers.update(id, { isArchived: archived });
+    return { ok: true };
+  }
+
+  async delete(id: number): Promise<{ ok: true }> {
+    const layer = await this.layers.findOne({ where: { id } });
+    if (!layer) return { ok: true };
+
+    await this.layers.remove(layer);
     return { ok: true };
   }
 }

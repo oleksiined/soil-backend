@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
   Param,
   Body,
   ParseIntPipe,
@@ -34,6 +35,12 @@ export class KmlLayersController {
     return this.service.getByProject(projectId);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get KML layer by id' })
+  getById(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getById(id);
+  }
+
   @Patch(':id/archive')
   @ApiOperation({ summary: 'Archive KML layer' })
   archive(@Param('id', ParseIntPipe) id: number) {
@@ -44,5 +51,11 @@ export class KmlLayersController {
   @ApiOperation({ summary: 'Unarchive KML layer' })
   unarchive(@Param('id', ParseIntPipe) id: number) {
     return this.service.setArchived(id, false);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete KML layer' })
+  delete(@Param('id', ParseIntPipe) id: number) {
+    return this.service.delete(id);
   }
 }
