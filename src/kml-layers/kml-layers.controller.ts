@@ -1,25 +1,48 @@
-import { Body, Controller, Get, Param, Post, Delete } from '@nestjs/common';
-import { KmlLayersService } from './kml-layers.service';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Param,
+  Body,
+  ParseIntPipe,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
+import { KmlLayersService } from './kml-layers.service';
+import { CreateKmlLayerDto } from './dto/create-kml-layer.dto';
+
+@ApiTags('KmlLayers')
 @Controller('kml-layers')
 export class KmlLayersController {
   constructor(private readonly service: KmlLayersService) {}
 
-  @Get('project/:projectId')
-  getByProject(@Param('projectId') projectId: number) {
-    return this.service.getByProject(Number(projectId));
-  }
-
   @Post('project/:projectId')
+  @ApiOperation({ summary: 'Create KML layer for project' })
   create(
-    @Param('projectId') projectId: number,
-    @Body() body: { name: string; content: string },
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Body() dto: CreateKmlLayerDto,
   ) {
-    return this.service.create(body.name, body.content, Number(projectId));
+    return this.service.create(projectId, dto);
   }
 
-  @Delete(':id')
-  delete(@Param('id') id: number) {
-    return this.service.delete(Number(id));
+  @Get('project/:projectId')
+  @ApiOperation({ summary: 'Get KML layers by project' })
+  getByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.service.getByProject(projectId);
+  }
+
+  @Patch(':id/archive')
+  @ApiOperation({ summary: 'Archive KML layer' })
+  archive(@Param('id', ParseIntPipe) id: number) {
+    return this.service.setArchived(id, true);
+  }
+
+  @Patch(':id/unarchive')
+  @ApiOperation({ summary: 'Unarchive KML layer' })
+  unarchive(@Param('id', ParseIntPipe) id: number) {
+    return this.service.setArchived(id, false);
   }
 }
