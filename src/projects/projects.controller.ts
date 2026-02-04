@@ -1,25 +1,36 @@
-import { Body, Controller, Get, Param, Post, Delete } from '@nestjs/common';
-import { ProjectsService } from './projects.service';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 
+import { ProjectsService } from './projects.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+
+@ApiTags('Projects')
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly service: ProjectsService) {}
+  constructor(private readonly projectsService: ProjectsService) {}
 
   @Post('folder/:folderId')
+  @ApiOperation({ summary: 'Create project in folder' })
+  @ApiParam({ name: 'folderId', type: Number, required: true })
+  @ApiBody({ type: CreateProjectDto, required: true })
   create(
     @Param('folderId') folderId: number,
-    @Body() body: { name: string },
+    @Body() dto: CreateProjectDto,
   ) {
-    return this.service.createProject(body.name, Number(folderId));
+    return this.projectsService.create(folderId, dto);
   }
 
   @Get(':id')
-  getDetails(@Param('id') id: number) {
-    return this.service.getProjectDetails(Number(id));
+  @ApiOperation({ summary: 'Get project by id' })
+  @ApiParam({ name: 'id', type: Number, required: true })
+  getById(@Param('id') id: number) {
+    return this.projectsService.getById(id);
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete project' })
+  @ApiParam({ name: 'id', type: Number, required: true })
   delete(@Param('id') id: number) {
-    return this.service.deleteProjectDeep(Number(id));
+    return this.projectsService.delete(id);
   }
 }

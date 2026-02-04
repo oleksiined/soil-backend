@@ -1,12 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateProjectDto {
-  @ApiProperty()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @ApiProperty({ example: 'Test project' })
   @IsString()
-  @MinLength(1)
-  @MaxLength(120)
-  name: string;
+  @IsNotEmpty()
+  name!: string;
 }
