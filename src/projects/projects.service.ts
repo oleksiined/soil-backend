@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -11,25 +15,21 @@ export class ProjectsService {
   constructor(
     @InjectRepository(ProjectEntity)
     private readonly projects: Repository<ProjectEntity>,
+
     @InjectRepository(FolderEntity)
     private readonly folders: Repository<FolderEntity>,
   ) {}
 
   async create(folderId: number, dto: CreateProjectDto): Promise<ProjectEntity> {
-    const folder = await this.folders.findOne({
-      where: { id: folderId } as any,
-    });
-
-    if (!folder) {
-      throw new NotFoundException('Folder not found');
-    }
+    const folder = await this.folders.findOne({ where: { id: folderId } });
+    if (!folder) throw new NotFoundException('Folder not found');
 
     try {
-      const project: ProjectEntity = this.projects.create({
+      const project = this.projects.create({
         name: dto.name,
         isArchived: false,
         folder,
-      } as ProjectEntity);
+      });
 
       return await this.projects.save(project);
     } catch {
@@ -37,33 +37,21 @@ export class ProjectsService {
     }
   }
 
-  async getById(id: number): Promise<ProjectEntity> {
-    const project = await this.projects.findOne({
-      where: { id } as any,
-      relations: { folder: true } as any,
+  async getByFolder(folderId: number): Promise<ProjectEntity[]> {
+    return this.projects.find({
+      where: { folder: { id: folderId } },
+      order: { id: 'ASC' },
     });
+  }
 
-    if (!project) {
-      throw new NotFoundException('Project not found');
-    }
-
+  async getById(id: number): Promise<ProjectEntity> {
+    const project = await this.projects.findOne({ where: { id } });
+    if (!project) throw new NotFoundException('Project not found');
     return project;
   }
 
   async delete(id: number): Promise<{ ok: true }> {
-    const project = await this.projects.findOne({
-      where: { id } as any,
-    });
-
-    if (!project) {
-      return { ok: true };
-    }
-
-    try {
-      await this.projects.remove(project);
-      return { ok: true };
-    } catch {
-      throw new InternalServerErrorException('Failed to delete project');
-    }
+    await this.projects.delete(id);
+    return { ok: true };
   }
 }
