@@ -16,10 +16,7 @@ export class KmlLayersService {
     private readonly projects: Repository<ProjectEntity>,
   ) {}
 
-  async create(
-    projectId: number,
-    dto: CreateKmlLayerDto,
-  ): Promise<KmlLayerEntity> {
+  async create(projectId: number, dto: CreateKmlLayerDto): Promise<KmlLayerEntity> {
     const project = await this.projects.findOne({ where: { id: projectId } });
     if (!project) throw new NotFoundException('Project not found');
 
@@ -53,7 +50,7 @@ export class KmlLayersService {
 
   async delete(id: number): Promise<{ ok: true }> {
     const layer = await this.layers.findOne({ where: { id } });
-    if (!layer) return { ok: true };
+    if (!layer) throw new NotFoundException('KML layer not found');
 
     await this.layers.remove(layer);
     return { ok: true };
