@@ -9,10 +9,10 @@ import { JwtStrategy } from './jwt.strategy';
 @Module({
   imports: [
     PassportModule,
-    JwtModule.register({}),
+    JwtModule.register({}), // secrets беруться в AuthService при signAsync/verifyAsync
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  exports: [JwtModule],
 })
 export class AuthModule {}

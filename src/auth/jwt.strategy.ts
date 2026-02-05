@@ -2,26 +2,26 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
+type JwtPayload = {
+  sub: number;
+  username: string;
+  role: string;
+};
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
-    const secret = process.env.JWT_ACCESS_SECRET;
-    if (!secret) {
-      throw new UnauthorizedException('JWT_ACCESS_SECRET is not configured');
-    }
+    const secret = process.env.JWT_ACCESS_SECRET || 'dev_access_secret';
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: secret,
       ignoreExpiration: false,
+      secretOrKey: secret,
     });
   }
 
-  validate(payload: any) {
-    return {
-      userId: payload.sub,
-      username: payload.username,
-      role: payload.role,
-    };
+  async validate(payload: JwtPayload) {
+    if (!payload) throw new UnauthorizedException();
+    return payload; // буде доступно як req.user
   }
 }
