@@ -7,13 +7,17 @@ import {
   Param,
   Body,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
+import { JwtAuthGuard } from '../auth/jwt.guard';
 import { KmlLayersService } from './kml-layers.service';
 import { CreateKmlLayerDto } from './dto/create-kml-layer.dto';
 
 @ApiTags('KmlLayers')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('kml-layers')
 export class KmlLayersController {
   constructor(private readonly service: KmlLayersService) {}
