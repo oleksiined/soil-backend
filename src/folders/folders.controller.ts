@@ -7,8 +7,10 @@ import {
   Patch,
   Post,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
+
 import { FoldersService } from './folders.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
 
@@ -22,7 +24,6 @@ export class FoldersController {
     name: 'all',
     required: false,
     type: Boolean,
-    description: 'If true – include archived folders',
   })
   getFolders(@Query('all') all = 'false') {
     return this.service.getFolders(all === 'true');
@@ -34,17 +35,17 @@ export class FoldersController {
   }
 
   @Patch(':id/archive')
-  archive(@Param('id') id: string) {
-    return this.service.setArchived(Number(id), true);
+  archive(@Param('id', ParseIntPipe) id: number) {
+    return this.service.setArchived(id, true);
   }
 
   @Patch(':id/unarchive')
-  unarchive(@Param('id') id: string) {
-    return this.service.setArchived(Number(id), false);
+  unarchive(@Param('id', ParseIntPipe) id: number) {
+    return this.service.setArchived(id, false);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.service.deleteFolderDeep(Number(id));
+  delete(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteFolderDeep(id);
   }
 }

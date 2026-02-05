@@ -1,7 +1,10 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { FolderEntity } from './entities/folder.entity';
+import { ProjectEntity } from '../projects/entities/project.entity';
+import { KmlLayerEntity } from '../kml-layers/entities/kml-layer.entity';
 
 @Injectable()
 export class FoldersService {
@@ -10,6 +13,12 @@ export class FoldersService {
   constructor(
     @InjectRepository(FolderEntity)
     private readonly folders: Repository<FolderEntity>,
+
+    @InjectRepository(ProjectEntity)
+    private readonly projects: Repository<ProjectEntity>,
+
+    @InjectRepository(KmlLayerEntity)
+    private readonly kml: Repository<KmlLayerEntity>,
   ) {}
 
   async getFolders(includeArchived = false): Promise<FolderEntity[]> {
@@ -21,46 +30,57 @@ export class FoldersService {
         .addOrderBy('p.id', 'ASC');
 
       if (!includeArchived) {
-        qb.where('f.isArchived = :arch', { arch: false });
+        qb.where('f.isArchived = false');
       }
 
       return await qb.getMany();
     } catch (e: any) {
-      this.logger.error('Failed to load folders from database');
-      this.logger.error(e?.message || e);
-      if (e?.query) this.logger.error(`SQL: ${e.query}`);
-      if (e?.parameters) this.logger.error(`Params: ${JSON.stringify(e.parameters)}`);
-      throw new InternalServerErrorException('Failed to load folders from database');
+      this.logger.error(e);
+      throw new InternalServerErrorException('Failed to load folders');
     }
   }
 
   async createFolder(name: string): Promise<FolderEntity> {
     try {
-      const folder: FolderEntity = this.folders.create({
+      const folder = this.folders.create({
         name,
         isArchived: false,
-      } as Partial<FolderEntity>) as FolderEntity;
+      });
 
-      const saved: FolderEntity = await this.folders.save(folder);
-      return saved;
+      return await this.folders.save(folder);
     } catch (e: any) {
-      this.logger.error('Failed to create folder');
-      this.logger.error(e?.message || e);
-      if (e?.query) this.logger.error(`SQL: ${e.query}`);
-      if (e?.parameters) this.logger.error(`Params: ${JSON.stringify(e.parameters)}`);
+      this.logger.error(e);
       throw new InternalServerErrorException('Failed to create folder');
     }
   }
 
   async setArchived(id: number, archived: boolean): Promise<{ ok: true }> {
     try {
-      await this.folders.update({ id } as any, { isArchived: archived } as any);
+      await this.folders.update({ id }, { isArchived: archived });
+
+      if (archived) {
+        const projects = await this.projects.find({
+          where: { folder: { id } },
+        });
+
+        if (projects.length) {
+          const projectIds = projects.map((p) => p.id);
+
+          await this.projects.update(
+            { id: projectIds as any },
+            { isArchived: true },
+          );
+
+          await this.kml.update(
+            { project: { id: projectIds as any } },
+            { isArchived: true },
+          );
+        }
+      }
+
       return { ok: true };
     } catch (e: any) {
-      this.logger.error('Failed to update folder archive flag');
-      this.logger.error(e?.message || e);
-      if (e?.query) this.logger.error(`SQL: ${e.query}`);
-      if (e?.parameters) this.logger.error(`Params: ${JSON.stringify(e.parameters)}`);
+      this.logger.error(e);
       throw new InternalServerErrorException('Failed to update folder');
     }
   }
@@ -68,8 +88,8 @@ export class FoldersService {
   async deleteFolderDeep(id: number): Promise<{ ok: true }> {
     try {
       const folder = await this.folders.findOne({
-        where: { id } as any,
-        relations: { projects: true } as any,
+        where: { id },
+        relations: { projects: true },
       });
 
       if (!folder) return { ok: true };
@@ -77,10 +97,7 @@ export class FoldersService {
       await this.folders.remove(folder);
       return { ok: true };
     } catch (e: any) {
-      this.logger.error('Failed to delete folder');
-      this.logger.error(e?.message || e);
-      if (e?.query) this.logger.error(`SQL: ${e.query}`);
-      if (e?.parameters) this.logger.error(`Params: ${JSON.stringify(e.parameters)}`);
+      this.logger.error(e);
       throw new InternalServerErrorException('Failed to delete folder');
     }
   }
