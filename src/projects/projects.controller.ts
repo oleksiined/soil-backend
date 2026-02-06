@@ -9,7 +9,7 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { ProjectsService } from './projects.service';
@@ -33,9 +33,7 @@ export class ProjectsController {
 
   @Get('folder/:folderId')
   @ApiOperation({ summary: 'Get projects by folder' })
-  getByFolder(
-    @Param('folderId', ParseIntPipe) folderId: number,
-  ) {
+  getByFolder(@Param('folderId', ParseIntPipe) folderId: number) {
     return this.projectsService.getByFolder(folderId);
   }
 

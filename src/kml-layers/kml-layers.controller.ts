@@ -9,7 +9,7 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { KmlLayersService } from './kml-layers.service';
@@ -33,9 +33,7 @@ export class KmlLayersController {
 
   @Get('project/:projectId')
   @ApiOperation({ summary: 'Get KML layers by project' })
-  getByProject(
-    @Param('projectId', ParseIntPipe) projectId: number,
-  ) {
+  getByProject(@Param('projectId', ParseIntPipe) projectId: number) {
     return this.service.getByProject(projectId);
   }
 
