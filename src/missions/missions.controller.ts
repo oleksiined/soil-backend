@@ -4,6 +4,7 @@ import {
   Get,
   Post,
   Param,
+  ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -19,18 +20,21 @@ import { JwtAuthGuard } from '../auth/jwt.guard';
 export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}
 
-  @Post()
-  create(@Body() body: CreateMissionDto) {
-    return this.missionsService.create(body);
+  @Post('project/:projectId')
+  create(
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Body() body: CreateMissionDto,
+  ) {
+    return this.missionsService.create(projectId, body);
   }
 
-  @Get()
-  findAll() {
-    return this.missionsService.findAll();
+  @Get('project/:projectId')
+  findByProject(@Param('projectId', ParseIntPipe) projectId: number) {
+    return this.missionsService.findByProject(projectId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.missionsService.findOne(Number(id));
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.missionsService.findOne(id);
   }
 }
