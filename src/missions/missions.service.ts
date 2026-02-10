@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Mission } from './entities/mission.entity';
-import { CreateMissionDto } from './dto/create-mission.dto';
 import { ProjectEntity } from '../projects/entities/project.entity';
+import { CreateMissionDto } from './dto/create-mission.dto';
 
 @Injectable()
 export class MissionsService {
@@ -20,10 +21,9 @@ export class MissionsService {
     if (!project) throw new NotFoundException('Project not found');
 
     const mission = this.missions.create({
-      projectId,
-      project,
       name: dto.name,
-      status: 'new',
+      status: dto.status ?? 'new',
+      project,
     });
 
     return this.missions.save(mission);
@@ -31,12 +31,12 @@ export class MissionsService {
 
   findByProject(projectId: number) {
     return this.missions.find({
-      where: { projectId },
+      where: { project: { id: projectId } },
       order: { id: 'ASC' },
     });
   }
 
   findOne(id: number) {
-    return this.missions.findOne({ where: { id } });
+    return this.missions.findOneBy({ id });
   }
 }
