@@ -10,10 +10,10 @@ export class UserEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, type: 'text' })
   username: string;
 
-  @Column()
+  @Column({ type: 'text' })
   password: string;
 
   @Column({
@@ -22,4 +22,7 @@ export class UserEntity {
     default: UserRole.USER,
   })
   role: UserRole;
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
 }

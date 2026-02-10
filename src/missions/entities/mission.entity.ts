@@ -11,6 +11,6 @@ export class Mission {
   @Column({ type: 'text', default: 'new' })
   status: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }

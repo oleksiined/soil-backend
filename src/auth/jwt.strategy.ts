@@ -11,7 +11,11 @@ type JwtPayload = {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
-    const secret = process.env.JWT_ACCESS_SECRET || 'dev_access_secret';
+    const secret = process.env.JWT_ACCESS_SECRET;
+
+    if (!secret) {
+      throw new Error('JWT_ACCESS_SECRET is not defined in .env');
+    }
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -22,6 +26,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     if (!payload) throw new UnauthorizedException();
-    return payload; // буде доступно як req.user
+    return payload;
   }
 }

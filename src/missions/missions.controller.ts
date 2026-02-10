@@ -1,7 +1,20 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
 import { MissionsService } from './missions.service';
 import { CreateMissionDto } from './dto/create-mission.dto';
+import { JwtAuthGuard } from '../auth/jwt.guard';
 
+@ApiTags('Missions')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('missions')
 export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}
