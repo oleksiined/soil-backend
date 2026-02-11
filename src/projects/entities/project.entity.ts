@@ -6,9 +6,9 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,
 } from 'typeorm';
 import { FolderEntity } from '../../folders/entities/folder.entity';
+import { Mission } from '../../missions/entities/mission.entity';
 import { KmlLayerEntity } from '../../kml-layers/entities/kml-layer.entity';
 
 @Entity('projects')
@@ -22,16 +22,20 @@ export class ProjectEntity {
   @Column({ default: false })
   isArchived: boolean;
 
-  @ManyToOne(() => FolderEntity, (folder) => folder.projects, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'folder_id' })
+  @ManyToOne(() => FolderEntity, (folder) => folder.projects, {
+    onDelete: 'CASCADE',
+  })
   folder: FolderEntity;
 
-  @OneToMany(() => KmlLayerEntity, (layer) => layer.project)
+  @OneToMany(() => Mission, (mission) => mission.project)
+  missions: Mission[];
+
+  @OneToMany(() => KmlLayerEntity, (kml) => kml.project)
   kmlLayers: KmlLayerEntity[];
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn()
   updatedAt: Date;
 }

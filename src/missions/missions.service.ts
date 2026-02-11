@@ -23,6 +23,7 @@ export class MissionsService {
     const mission = this.missions.create({
       name: dto.name,
       status: dto.status ?? 'new',
+      isArchived: false,
       project,
     });
 
@@ -31,12 +32,34 @@ export class MissionsService {
 
   findByProject(projectId: number) {
     return this.missions.find({
-      where: { project: { id: projectId } },
+      where: {
+        project: { id: projectId },
+        isArchived: false,
+      },
       order: { id: 'ASC' },
     });
   }
 
   findOne(id: number) {
-    return this.missions.findOneBy({ id });
+    return this.missions.findOne({
+      where: { id },
+      relations: { project: true },
+    });
+  }
+
+  async setArchived(id: number, archived: boolean) {
+    const mission = await this.missions.findOne({ where: { id } });
+    if (!mission) throw new NotFoundException('Mission not found');
+
+    await this.missions.update(id, { isArchived: archived });
+    return { ok: true };
+  }
+
+  async delete(id: number) {
+    const mission = await this.missions.findOne({ where: { id } });
+    if (!mission) throw new NotFoundException('Mission not found');
+
+    await this.missions.remove(mission);
+    return { ok: true };
   }
 }

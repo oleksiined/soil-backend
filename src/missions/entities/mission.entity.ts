@@ -4,7 +4,6 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 import { ProjectEntity } from '../../projects/entities/project.entity';
 
@@ -19,12 +18,13 @@ export class Mission {
   @Column({ type: 'text', default: 'new' })
   status: string;
 
-  @Column({ name: 'project_id', type: 'int', nullable: true })
-  projectId: number | null;
+  @Column({ default: false })
+  isArchived: boolean;
 
-  @ManyToOne(() => ProjectEntity, { onDelete: 'CASCADE', nullable: true })
-  @JoinColumn({ name: 'project_id' })
-  project: ProjectEntity | null;
+  @ManyToOne(() => ProjectEntity, (project) => project.missions, {
+    onDelete: 'CASCADE',
+  })
+  project: ProjectEntity;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

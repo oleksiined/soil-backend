@@ -1,56 +1,56 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly usersService: UsersService,
+  ) {}
 
   async login(dto: LoginDto) {
-    const adminUsername = process.env.ADMIN_USERNAME;
-    const adminPassword = process.env.ADMIN_PASSWORD;
+    const user = await this.usersService.findByUsername(dto.username);
 
-    if (!adminUsername || !adminPassword) {
-      throw new UnauthorizedException('Admin credentials are not configured');
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (dto.username !== adminUsername || dto.password !== adminPassword) {
+    const passwordMatch = await bcrypt.compare(dto.password, user.password);
+
+    if (!passwordMatch) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const payload = {
-      sub: 0,
-      username: dto.username,
-      role: 'ADMIN',
+      sub: user.id,
+      username: user.username,
+      role: user.role,
     };
-
-    const accessTtlSec = this.parseTtlToSeconds(process.env.JWT_ACCESS_TTL ?? '15m');
-    const refreshTtlSec = this.parseTtlToSeconds(process.env.JWT_REFRESH_TTL ?? '30d');
 
     const accessToken = await this.jwt.signAsync(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: accessTtlSec,
+      expiresIn: '15m',
     });
 
     const refreshToken = await this.jwt.signAsync(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: refreshTtlSec,
+      expiresIn: '30d',
     });
 
     return {
       tokenType: 'Bearer',
       accessToken,
       refreshToken,
-      expiresIn: accessTtlSec,
+      expiresIn: 900,
     };
   }
 
   async refresh(dto: RefreshDto) {
-    if (!process.env.JWT_REFRESH_SECRET) {
-      throw new UnauthorizedException('Refresh secret is not configured');
-    }
-
     let payload: any;
 
     try {
@@ -61,8 +61,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const accessTtlSec = this.parseTtlToSeconds(process.env.JWT_ACCESS_TTL ?? '15m');
-
     const accessToken = await this.jwt.signAsync(
       {
         sub: payload.sub,
@@ -71,35 +69,14 @@ export class AuthService {
       },
       {
         secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: accessTtlSec,
+        expiresIn: '15m',
       },
     );
 
     return {
       tokenType: 'Bearer',
       accessToken,
-      expiresIn: accessTtlSec,
+      expiresIn: 900,
     };
-  }
-
-  private parseTtlToSeconds(value: string): number {
-    const v = value.trim().toLowerCase();
-
-    const m = v.match(/^(\d+)(s|m|h|d)$/);
-    if (!m) {
-      const n = Number(v);
-      if (Number.isFinite(n) && n > 0) return Math.floor(n);
-      return 900;
-    }
-
-    const num = Number(m[1]);
-    const unit = m[2];
-
-    if (!Number.isFinite(num) || num <= 0) return 900;
-
-    if (unit === 's') return num;
-    if (unit === 'm') return num * 60;
-    if (unit === 'h') return num * 60 * 60;
-    return num * 60 * 60 * 24;
   }
 }
