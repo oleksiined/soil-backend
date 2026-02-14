@@ -23,8 +23,8 @@ export class MissionsService {
     const mission = this.missions.create({
       name: dto.name,
       status: dto.status ?? 'new',
-      isArchived: false,
       project,
+      isArchived: false,
     });
 
     return this.missions.save(mission);
@@ -32,34 +32,28 @@ export class MissionsService {
 
   findByProject(projectId: number) {
     return this.missions.find({
-      where: {
-        project: { id: projectId },
-        isArchived: false,
-      },
+      where: { project: { id: projectId }, isArchived: false },
       order: { id: 'ASC' },
     });
   }
 
   findOne(id: number) {
-    return this.missions.findOne({
-      where: { id },
-      relations: { project: true },
-    });
+    return this.missions.findOneBy({ id });
   }
 
   async setArchived(id: number, archived: boolean) {
-    const mission = await this.missions.findOne({ where: { id } });
+    const mission = await this.missions.findOneBy({ id });
     if (!mission) throw new NotFoundException('Mission not found');
 
     await this.missions.update(id, { isArchived: archived });
-    return { ok: true };
+    return true;
   }
 
   async delete(id: number) {
-    const mission = await this.missions.findOne({ where: { id } });
+    const mission = await this.missions.findOneBy({ id });
     if (!mission) throw new NotFoundException('Mission not found');
 
-    await this.missions.remove(mission);
-    return { ok: true };
+    await this.missions.delete(id);
+    return true;
   }
 }

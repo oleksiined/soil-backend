@@ -18,7 +18,7 @@ export class Mission {
   @Column({ type: 'text', default: 'new' })
   status: string;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   isArchived: boolean;
 
   @ManyToOne(() => ProjectEntity, (project) => project.missions, {

@@ -3,9 +3,9 @@ import {
   Controller,
   Get,
   Post,
+  Param,
   Patch,
   Delete,
-  Param,
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
@@ -25,8 +25,8 @@ export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}
 
   @Post('project/:projectId')
-  @ApiOperation({ summary: 'Create mission for project' })
   @Roles('ADMIN')
+  @ApiOperation({ summary: 'Create mission for project' })
   create(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Body() body: CreateMissionDto,
@@ -47,22 +47,22 @@ export class MissionsController {
   }
 
   @Patch(':id/archive')
-  @ApiOperation({ summary: 'Archive mission' })
   @Roles('ADMIN')
+  @ApiOperation({ summary: 'Archive mission' })
   archive(@Param('id', ParseIntPipe) id: number) {
     return this.missionsService.setArchived(id, true);
   }
 
   @Patch(':id/unarchive')
-  @ApiOperation({ summary: 'Unarchive mission' })
   @Roles('ADMIN')
+  @ApiOperation({ summary: 'Unarchive mission' })
   unarchive(@Param('id', ParseIntPipe) id: number) {
     return this.missionsService.setArchived(id, false);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete mission' })
   @Roles('ADMIN')
+  @ApiOperation({ summary: 'Delete mission' })
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.missionsService.delete(id);
   }
