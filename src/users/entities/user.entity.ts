@@ -10,10 +10,10 @@ export class UserEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true, type: 'text' })
+  @Column({ unique: true })
   username: string;
 
-  @Column({ type: 'text' })
+  @Column()
   password: string;
 
   @Column({
@@ -23,6 +23,6 @@ export class UserEntity {
   })
   role: UserRole;
 
-  @Column({ type: 'boolean', default: true })
-  isActive: boolean;
+  @Column({ type: 'text', nullable: true })
+  refreshTokenHash: string | null;
 }

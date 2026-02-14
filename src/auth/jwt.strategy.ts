@@ -12,10 +12,7 @@ type JwtPayload = {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     const secret = process.env.JWT_ACCESS_SECRET;
-
-    if (!secret) {
-      throw new Error('JWT_ACCESS_SECRET is not defined in .env');
-    }
+    if (!secret) throw new Error('JWT_ACCESS_SECRET is not defined in .env');
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
