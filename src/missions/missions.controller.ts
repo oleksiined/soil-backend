@@ -6,10 +6,11 @@ import {
   Param,
   Patch,
   Delete,
-  UseGuards,
+  Query,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { MissionsService } from './missions.service';
 import { CreateMissionDto } from './dto/create-mission.dto';
@@ -26,7 +27,6 @@ export class MissionsController {
 
   @Post('project/:projectId')
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Create mission for project' })
   create(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Body() body: CreateMissionDto,
@@ -35,35 +35,38 @@ export class MissionsController {
   }
 
   @Get('project/:projectId')
-  @ApiOperation({ summary: 'Get missions by project' })
-  findByProject(@Param('projectId', ParseIntPipe) projectId: number) {
-    return this.missionsService.findByProject(projectId);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get mission by id' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.findOne(id);
+  findByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    return this.missionsService.findByProject(
+      projectId,
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Patch(':id/archive')
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Archive mission' })
   archive(@Param('id', ParseIntPipe) id: number) {
     return this.missionsService.setArchived(id, true);
   }
 
   @Patch(':id/unarchive')
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Unarchive mission' })
   unarchive(@Param('id', ParseIntPipe) id: number) {
     return this.missionsService.setArchived(id, false);
   }
 
   @Delete(':id')
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Delete mission' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.delete(id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.missionsService.setArchived(id, true);
+  }
+
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.missionsService.findOne(id);
   }
 }
