@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 
 import { ProjectEntity } from './entities/project.entity';
 import { FolderEntity } from '../folders/entities/folder.entity';
-import { CreateProjectDto } from './dto/create-project.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -16,66 +15,63 @@ export class ProjectsService {
     private readonly folders: Repository<FolderEntity>,
   ) {}
 
-  async create(
-    folderId: number,
-    dto: CreateProjectDto,
-  ): Promise<ProjectEntity> {
+  async create(folderId: number, name: string) {
     const folder = await this.folders.findOne({ where: { id: folderId } });
     if (!folder) throw new NotFoundException('Folder not found');
 
     const project = this.projects.create({
-      name: dto.name,
-      isArchived: false,
+      name,
       folder,
+      isArchived: false,
     });
 
     return this.projects.save(project);
   }
 
-  async getByFolder(folderId: number): Promise<ProjectEntity[]> {
-    const folder = await this.folders.findOne({ where: { id: folderId } });
-    if (!folder) throw new NotFoundException('Folder not found');
-
+  async findByFolder(folderId: number) {
     return this.projects.find({
       where: {
         folder: { id: folderId },
+        isArchived: false,
       },
-      relations: {
-        folder: true,
-        missions: true,
-        kmlLayers: true,
-      },
-      order: {
-        id: 'ASC',
-      },
+      relations: ['missions', 'kmlLayers'],
+      order: { id: 'ASC' },
     });
   }
 
-  async getById(id: number): Promise<ProjectEntity> {
+  async findOne(id: number) {
     const project = await this.projects.findOne({
       where: { id },
-      relations: {
-        folder: true,
-        missions: true,
-        kmlLayers: true,
-      },
+      relations: ['missions', 'kmlLayers'],
     });
 
     if (!project) throw new NotFoundException('Project not found');
     return project;
   }
 
-  async setArchived(id: number, archived: boolean): Promise<{ ok: true }> {
+  async archive(id: number) {
     const project = await this.projects.findOne({ where: { id } });
     if (!project) throw new NotFoundException('Project not found');
 
-    await this.projects.update(id, { isArchived: archived });
+    project.isArchived = true;
+    await this.projects.save(project);
+
     return { ok: true };
   }
 
-  async delete(id: number): Promise<{ ok: true }> {
+  async unarchive(id: number) {
     const project = await this.projects.findOne({ where: { id } });
-    if (!project) return { ok: true };
+    if (!project) throw new NotFoundException('Project not found');
+
+    project.isArchived = false;
+    await this.projects.save(project);
+
+    return { ok: true };
+  }
+
+  async delete(id: number) {
+    const project = await this.projects.findOne({ where: { id } });
+    if (!project) throw new NotFoundException('Project not found');
 
     await this.projects.remove(project);
     return { ok: true };
