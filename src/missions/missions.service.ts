@@ -21,47 +21,25 @@ export class MissionsService {
     if (!project) throw new NotFoundException('Project not found');
 
     const mission = this.missions.create({
+      projectId: project.id,
+      project,
       name: dto.name,
       status: dto.status ?? 'new',
-      project,
     });
 
     return this.missions.save(mission);
   }
 
-  async findByProject(projectId: number, page = 1, limit = 10) {
-    const [items, total] = await this.missions.findAndCount({
-      where: {
-        project: { id: projectId },
-        isArchived: false,
-      },
+  findByProject(projectId: number) {
+    return this.missions.find({
+      where: { projectId },
       order: { id: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
     });
-
-    return {
-      items,
-      meta: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-      },
-    };
-  }
-
-  async setArchived(id: number, value: boolean) {
-    const mission = await this.missions.findOne({ where: { id } });
-    if (!mission) throw new NotFoundException('Mission not found');
-
-    mission.isArchived = value;
-    return this.missions.save(mission);
   }
 
   async findOne(id: number) {
-    return this.missions.findOne({
-      where: { id, isArchived: false },
-    });
+    const m = await this.missions.findOne({ where: { id } });
+    if (!m) throw new NotFoundException('Mission not found');
+    return m;
   }
 }

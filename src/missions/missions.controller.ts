@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Param,
-  Patch,
-  Delete,
-  Query,
-  ParseIntPipe,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { MissionsService } from './missions.service';
@@ -27,46 +16,17 @@ export class MissionsController {
 
   @Post('project/:projectId')
   @Roles('ADMIN')
-  create(
-    @Param('projectId', ParseIntPipe) projectId: number,
-    @Body() body: CreateMissionDto,
-  ) {
-    return this.missionsService.create(projectId, body);
+  create(@Param('projectId') projectId: string, @Body() body: CreateMissionDto) {
+    return this.missionsService.create(Number(projectId), body);
   }
 
   @Get('project/:projectId')
-  findByProject(
-    @Param('projectId', ParseIntPipe) projectId: number,
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
-  ) {
-    return this.missionsService.findByProject(
-      projectId,
-      Number(page),
-      Number(limit),
-    );
-  }
-
-  @Patch(':id/archive')
-  @Roles('ADMIN')
-  archive(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.setArchived(id, true);
-  }
-
-  @Patch(':id/unarchive')
-  @Roles('ADMIN')
-  unarchive(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.setArchived(id, false);
-  }
-
-  @Delete(':id')
-  @Roles('ADMIN')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.setArchived(id, true);
+  findByProject(@Param('projectId') projectId: string) {
+    return this.missionsService.findByProject(Number(projectId));
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.findOne(id);
+  findOne(@Param('id') id: string) {
+    return this.missionsService.findOne(Number(id));
   }
 }

@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -36,19 +33,32 @@ export class ProjectsService {
   }
 
   async getByFolder(folderId: number): Promise<ProjectEntity[]> {
+    const folder = await this.folders.findOne({ where: { id: folderId } });
+    if (!folder) throw new NotFoundException('Folder not found');
+
     return this.projects.find({
       where: {
         folder: { id: folderId },
-        isArchived: false,
       },
-      order: { id: 'ASC' },
+      relations: {
+        folder: true,
+        missions: true,
+        kmlLayers: true,
+      },
+      order: {
+        id: 'ASC',
+      },
     });
   }
 
   async getById(id: number): Promise<ProjectEntity> {
     const project = await this.projects.findOne({
       where: { id },
-      relations: { folder: true },
+      relations: {
+        folder: true,
+        missions: true,
+        kmlLayers: true,
+      },
     });
 
     if (!project) throw new NotFoundException('Project not found');
