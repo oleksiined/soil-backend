@@ -1,14 +1,25 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors();
+  // Global validation (щоб DTO працювали правильно)
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
+  // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('Soil API')
+    .setTitle('Soil Backend API')
+    .setDescription('API documentation for Soil application')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
@@ -18,4 +29,5 @@ async function bootstrap() {
 
   await app.listen(3000);
 }
+
 bootstrap();

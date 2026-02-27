@@ -8,6 +8,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { KmlLayersModule } from './kml-layers/kml-layers.module';
 import { UsersModule } from './users/users.module';
 import { MissionsModule } from './missions/missions.module';
+import { TracksModule } from './tracks/tracks.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { MissionsModule } from './missions/missions.module';
     ProjectsModule,
     KmlLayersModule,
     MissionsModule,
+    TracksModule,
   ],
 })
 export class AppModule {}

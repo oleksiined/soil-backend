@@ -3,11 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
   JoinColumn,
 } from 'typeorm';
 import { ProjectEntity } from '../../projects/entities/project.entity';
+import { TrackPoint } from '../../tracks/entities/track-point.entity';
 
 @Entity('missions')
 export class Mission {
@@ -26,6 +28,12 @@ export class Mission {
 
   @Column({ type: 'text', default: 'new' })
   status: string;
+
+  @Column({ default: false })
+  isArchived: boolean;
+
+  @OneToMany(() => TrackPoint, (point) => point.mission)
+  trackPoints: TrackPoint[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   created_at: Date;
