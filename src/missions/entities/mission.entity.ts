@@ -7,11 +7,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { ProjectEntity } from '../../projects/entities/project.entity';
 import { TrackPoint } from '../../tracks/entities/track-point.entity';
 
 @Entity('missions')
+@Index('idx_missions_project_id', ['projectId'])
+@Index('idx_missions_archived', ['isArchived'])
 export class Mission {
   @PrimaryGeneratedColumn()
   id: number;

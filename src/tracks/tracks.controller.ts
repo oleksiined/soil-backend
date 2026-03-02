@@ -4,42 +4,70 @@ import {
   Delete,
   Get,
   Param,
+  ParseArrayPipe,
+  ParseIntPipe,
   Post,
-  UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-
-import { JwtAuthGuard } from '../auth/jwt.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { TracksService } from './tracks.service';
 import { CreateTrackPointDto } from './dto/create-track-point.dto';
 
 @ApiTags('Tracks')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('tracks')
 export class TracksController {
-  constructor(private readonly service: TracksService) {}
+  constructor(private readonly tracksService: TracksService) {}
 
   @Post('mission/:missionId/point')
-  @Roles('ADMIN')
-  addPoint(
-    @Param('missionId') missionId: string,
+  @ApiOperation({ summary: 'Add single GPS track point to mission' })
+  @ApiParam({ name: 'missionId', type: Number })
+  async addPoint(
+    @Param('missionId', ParseIntPipe) missionId: number,
     @Body() dto: CreateTrackPointDto,
   ) {
-    return this.service.addPoint(Number(missionId), dto);
+    return this.tracksService.addPoint(missionId, dto);
+  }
+
+  @Post('mission/:missionId/batch')
+  @ApiOperation({ summary: 'Add batch of GPS track points to mission' })
+  @ApiParam({ name: 'missionId', type: Number })
+  @ApiBody({ type: [CreateTrackPointDto] })
+  async addBatch(
+    @Param('missionId', ParseIntPipe) missionId: number,
+    @Body(
+      new ParseArrayPipe({
+        items: CreateTrackPointDto,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    )
+    points: CreateTrackPointDto[],
+  ) {
+    return this.tracksService.addBatch(missionId, points);
   }
 
   @Get('mission/:missionId')
-  getByMission(@Param('missionId') missionId: string) {
-    return this.service.getByMission(Number(missionId));
+  @ApiOperation({ summary: 'Get all GPS track points for mission' })
+  @ApiParam({ name: 'missionId', type: Number })
+  async getByMission(
+    @Param('missionId', ParseIntPipe) missionId: number,
+  ) {
+    return this.tracksService.getByMission(missionId);
   }
 
   @Delete('mission/:missionId')
-  @Roles('ADMIN')
-  deleteByMission(@Param('missionId') missionId: string) {
-    return this.service.deleteByMission(Number(missionId));
+  @ApiOperation({ summary: 'Delete all GPS track points for mission' })
+  @ApiParam({ name: 'missionId', type: Number })
+  async deleteByMission(
+    @Param('missionId', ParseIntPipe) missionId: number,
+  ) {
+    return this.tracksService.deleteByMission(missionId);
   }
 }

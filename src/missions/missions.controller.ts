@@ -1,69 +1,41 @@
 import {
-  Body,
   Controller,
   Get,
   Param,
-  Patch,
-  Post,
-  Delete,
-  UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { MissionsService } from './missions.service';
-import { CreateMissionDto } from './dto/create-mission.dto';
-import { JwtAuthGuard } from '../auth/jwt.guard';
-import { Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { MissionSummaryDto } from './dto/mission-summary.dto';
+import { MissionRouteGeoJsonDto } from './dto/mission-route-geojson.dto';
 
 @ApiTags('Missions')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('missions')
 export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}
 
-  @Post('project/:projectId')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Create mission for project' })
-  create(
-    @Param('projectId', ParseIntPipe) projectId: number,
-    @Body() body: CreateMissionDto,
-  ) {
-    return this.missionsService.create(projectId, body);
+  @Get(':missionId/summary')
+  @ApiOperation({ summary: 'Get mission GPS summary' })
+  @ApiParam({ name: 'missionId', type: Number })
+  async getSummary(
+    @Param('missionId', ParseIntPipe) missionId: number,
+  ): Promise<MissionSummaryDto> {
+    return this.missionsService.getSummary(missionId);
   }
 
-  @Get('project/:projectId')
-  @ApiOperation({ summary: 'Get missions by project' })
-  findByProject(@Param('projectId', ParseIntPipe) projectId: number) {
-    return this.missionsService.findByProject(projectId);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get mission by id' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.findOne(id);
-  }
-
-  @Patch(':id/archive')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Archive mission' })
-  archive(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.setArchived(id, true);
-  }
-
-  @Patch(':id/unarchive')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Unarchive mission' })
-  unarchive(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.setArchived(id, false);
-  }
-
-  @Delete(':id')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Delete mission' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.missionsService.delete(id);
+  @Get(':missionId/route.geojson')
+  @ApiOperation({ summary: 'Get mission route as GeoJSON LineString' })
+  @ApiParam({ name: 'missionId', type: Number })
+  async getRoute(
+    @Param('missionId', ParseIntPipe) missionId: number,
+  ): Promise<MissionRouteGeoJsonDto> {
+    return this.missionsService.getRouteGeoJson(missionId);
   }
 }
