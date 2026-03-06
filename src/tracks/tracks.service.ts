@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
 import { TrackPoint } from './entities/track-point.entity';
 import { Mission } from '../missions/entities/mission.entity';
 import { CreateTrackPointDto } from './dto/create-track-point.dto';
@@ -16,84 +15,71 @@ export class TracksService {
     private readonly missionsRepo: Repository<Mission>,
   ) {}
 
-  /**
-   * Add single GPS point
-   */
   async addPoint(missionId: number, dto: CreateTrackPointDto) {
-    const missionExists = await this.missionsRepo.exist({
+    const mission = await this.missionsRepo.findOne({
       where: { id: missionId },
     });
 
-    if (!missionExists) {
+    if (!mission) {
       throw new NotFoundException('Mission not found');
     }
 
     const point = this.pointsRepo.create({
-      missionId,
+      mission,
       lat: dto.lat,
       lng: dto.lng,
-      speed: dto.speed ?? null,
-      heading: dto.heading ?? null,
-      accuracy: dto.accuracy ?? null,
-      timestamp: dto.timestamp ? new Date(dto.timestamp) : new Date(),
+      speed: dto.speed,
+      heading: dto.heading,
+      geom: {
+        type: 'Point',
+        coordinates: [dto.lng, dto.lat],
+      } as any,
     });
 
     return this.pointsRepo.save(point);
   }
 
-  /**
-   * Add batch of GPS points (optimized for field mode)
-   */
-  async addBatch(missionId: number, points: CreateTrackPointDto[]) {
-    if (!points.length) {
-      return { inserted: 0 };
-    }
-
-    const missionExists = await this.missionsRepo.exist({
+  async addBatch(missionId: number, dtos: CreateTrackPointDto[]) {
+    const mission = await this.missionsRepo.findOne({
       where: { id: missionId },
     });
 
-    if (!missionExists) {
+    if (!mission) {
       throw new NotFoundException('Mission not found');
     }
 
-    const entities = points.map((dto) =>
+    const points = dtos.map((dto) =>
       this.pointsRepo.create({
-        missionId,
+        mission,
         lat: dto.lat,
         lng: dto.lng,
-        speed: dto.speed ?? null,
-        heading: dto.heading ?? null,
-        accuracy: dto.accuracy ?? null,
-        timestamp: dto.timestamp ? new Date(dto.timestamp) : new Date(),
+        speed: dto.speed,
+        heading: dto.heading,
+        geom: {
+          type: 'Point',
+          coordinates: [dto.lng, dto.lat],
+        } as any,
       }),
     );
 
-    await this.pointsRepo.save(entities);
-
-    return {
-      inserted: entities.length,
-    };
+    return this.pointsRepo.save(points);
   }
 
-  /**
-   * Get all points of mission ordered by timestamp
-   */
   async getByMission(missionId: number) {
     return this.pointsRepo.find({
-      where: { missionId },
+      where: {
+        mission: { id: missionId },
+      },
       order: {
-        timestamp: 'ASC',
-        id: 'ASC',
+        createdAt: 'ASC',
       },
     });
   }
 
-  /**
-   * Delete all points of mission
-   */
   async deleteByMission(missionId: number) {
-    await this.pointsRepo.delete({ missionId });
+    await this.pointsRepo.delete({
+      mission: { id: missionId } as any,
+    });
 
     return { ok: true };
   }

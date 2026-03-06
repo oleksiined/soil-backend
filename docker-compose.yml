@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: soil_postgis
+    restart: always
+    environment:
+      POSTGRES_DB: soil
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 4893
+    ports:
+      - "5433:5432"
+    volumes:
+      - soil_pgdata:/var/lib/postgresql/data
+
+volumes:
+  soil_pgdata:

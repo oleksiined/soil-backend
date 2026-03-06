@@ -10,8 +10,6 @@ import {
 import { Mission } from '../../missions/entities/mission.entity';
 
 @Entity('track_points')
-@Index('idx_track_points_mission_id', ['missionId'])
-@Index('idx_track_points_mission_id_timestamp', ['missionId', 'timestamp'])
 export class TrackPoint {
   @PrimaryGeneratedColumn()
   id: number;
@@ -32,28 +30,20 @@ export class TrackPoint {
   lng: number;
 
   @Column({ type: 'double precision', nullable: true })
-  speed: number | null;
+  speed: number;
 
   @Column({ type: 'double precision', nullable: true })
-  heading: number | null;
+  heading: number;
 
-  /**
-   * GPS accuracy (meters) - optional but useful for filtering bad points
-   */
-  @Column({ type: 'double precision', nullable: true })
-  accuracy: number | null;
+  @Column({
+    type: 'geometry',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true,
+  })
+  @Index({ spatial: true })
+  geom: string;
 
-  /**
-   * Real point time from device (important for offline sync).
-   * Made nullable for backward compatibility with current DTO/API.
-   * (We will later enforce it in DTO/validation.)
-   */
-  @Column({ type: 'timestamptz', nullable: true })
-  timestamp: Date | null;
-
-  /**
-   * Server insert time
-   */
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }
