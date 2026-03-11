@@ -11,6 +11,7 @@ import { MissionsModule } from './missions/missions.module';
 import { TracksModule } from './tracks/tracks.module';
 
 import { ZoneSamplingModule } from './zone-sampling/zone-sampling.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -36,8 +37,8 @@ import { ZoneSamplingModule } from './zone-sampling/zone-sampling.module';
     KmlLayersModule,
     MissionsModule,
     TracksModule,
-
     ZoneSamplingModule,
+    CommentsModule,
   ],
 })
 export class AppModule {}
