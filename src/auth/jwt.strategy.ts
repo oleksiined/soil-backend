@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ConfigService } from '@nestjs/config';
 
 type JwtPayload = {
   sub: number;
@@ -10,9 +11,11 @@ type JwtPayload = {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
-    const secret = process.env.JWT_ACCESS_SECRET;
-    if (!secret) throw new Error('JWT_ACCESS_SECRET is not defined in .env');
+  constructor(private readonly configService: ConfigService) {
+    const secret = configService.get<string>('JWT_ACCESS_SECRET');
+    if (!secret) {
+      throw new Error('JWT_ACCESS_SECRET is not defined in .env');
+    }
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

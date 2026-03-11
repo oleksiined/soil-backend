@@ -1,4 +1,4 @@
-export interface MissionRouteGeoJsonDto {
+export class MissionRouteGeoJsonDto {
   type: 'Feature';
   geometry: {
     type: 'LineString';
@@ -6,6 +6,5 @@ export interface MissionRouteGeoJsonDto {
   };
   properties: {
     missionId: number;
-    pointsCount: number;
   };
 }
