@@ -13,6 +13,7 @@ import { ZoneSamplingModule } from './zone-sampling/zone-sampling.module';
 import { CommentsModule } from './comments/comments.module';
 import { AccessModule } from './access/access.module';
 import { StatsModule } from './stats/stats.module';
+import { LiveModule } from './live/live.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { StatsModule } from './stats/stats.module';
     CommentsModule,
     AccessModule,
     StatsModule,
+    LiveModule,
   ],
 })
 export class AppModule {}
