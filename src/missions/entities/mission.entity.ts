@@ -11,9 +11,11 @@ import {
 } from 'typeorm';
 import { ProjectEntity } from '../../projects/entities/project.entity';
 import { TrackPoint } from '../../tracks/entities/track-point.entity';
+import { UserEntity } from '../../users/entities/user.entity';
 
 @Entity('missions')
 @Index('idx_missions_project_id', ['projectId'])
+@Index('idx_missions_user_id', ['userId'])
 @Index('idx_missions_archived', ['isArchived'])
 export class Mission {
   @PrimaryGeneratedColumn()
@@ -25,6 +27,14 @@ export class Mission {
   @ManyToOne(() => ProjectEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'project_id' })
   project: ProjectEntity;
+
+  /** Юзер який виконує місію — потрібен для статистики */
+  @Column({ name: 'user_id', type: 'int', nullable: true })
+  userId: number | null;
+
+  @ManyToOne(() => UserEntity, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'user_id' })
+  user: UserEntity | null;
 
   @Column({ type: 'text' })
   name: string;

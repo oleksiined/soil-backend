@@ -12,6 +12,7 @@ import { TracksModule } from './tracks/tracks.module';
 import { ZoneSamplingModule } from './zone-sampling/zone-sampling.module';
 import { CommentsModule } from './comments/comments.module';
 import { AccessModule } from './access/access.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { AccessModule } from './access/access.module';
     ZoneSamplingModule,
     CommentsModule,
     AccessModule,
+    StatsModule,
   ],
 })
 export class AppModule {}
