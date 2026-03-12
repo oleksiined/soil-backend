@@ -24,7 +24,7 @@ export class MissionsService {
   // CRUD
   // =========================
 
-  async create(projectId: number, dto: CreateMissionDto) {
+  async create(projectId: number, dto: CreateMissionDto, userId?: number) {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
     if (!project) throw new NotFoundException('Project not found');
 
@@ -32,6 +32,7 @@ export class MissionsService {
       project,
       projectId: project.id,
       name: dto.name,
+      userId: userId ?? null,
       status: 'new',
       isArchived: false,
     });

@@ -69,11 +69,19 @@ export class ZoneSamplingStatus {
   /**
    * Фінальний статус — враховує і авто і ручне підтвердження.
    * Якщо manualOverride != null — воно має пріоритет.
+   * Використовується як computed поле при серіалізації.
    */
   get effectiveSampled(): boolean {
     if (this.manualOverride !== null && this.manualOverride !== undefined) {
       return this.manualOverride;
     }
     return this.isSampled;
+  }
+
+  toJSON() {
+    return {
+      ...this,
+      effectiveSampled: this.effectiveSampled,
+    };
   }
 }

@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   ParseFloatPipe,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 
@@ -32,8 +33,9 @@ export class MissionsController {
   create(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Body() dto: CreateMissionDto,
+    @Req() req: any,
   ) {
-    return this.missionsService.create(projectId, dto);
+    return this.missionsService.create(projectId, dto, req.user.sub);
   }
 
   @Get('project/:projectId')
