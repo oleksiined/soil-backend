@@ -4,6 +4,7 @@ import { ZoneSamplingStatus } from './entities/zone-sampling-status.entity';
 import { MissionProcessingQueue } from './entities/mission-processing-queue.entity';
 import { ZoneSamplingService } from './zone-sampling.service';
 import { ZoneSamplingWorkerService } from './zone-sampling.worker.service';
+import { ZoneSamplingController } from './zone-sampling.controller';
 import { Mission } from '../missions/entities/mission.entity';
 import { TrackPoint } from '../tracks/entities/track-point.entity';
 
@@ -16,6 +17,7 @@ import { TrackPoint } from '../tracks/entities/track-point.entity';
       TrackPoint,
     ]),
   ],
+  controllers: [ZoneSamplingController],
   providers: [ZoneSamplingService, ZoneSamplingWorkerService],
   exports: [ZoneSamplingService],
 })
