@@ -9,9 +9,9 @@ import { ProjectsModule } from './projects/projects.module';
 import { KmlLayersModule } from './kml-layers/kml-layers.module';
 import { MissionsModule } from './missions/missions.module';
 import { TracksModule } from './tracks/tracks.module';
-
 import { ZoneSamplingModule } from './zone-sampling/zone-sampling.module';
 import { CommentsModule } from './comments/comments.module';
+import { AccessModule } from './access/access.module';
 
 @Module({
   imports: [
@@ -39,6 +39,7 @@ import { CommentsModule } from './comments/comments.module';
     TracksModule,
     ZoneSamplingModule,
     CommentsModule,
+    AccessModule,
   ],
 })
 export class AppModule {}
